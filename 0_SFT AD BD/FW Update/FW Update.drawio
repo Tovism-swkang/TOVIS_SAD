@@ -1,0 +1,318 @@
+<mxfile host="65bd71144e">
+    <diagram id="yldvcxovfB1Y7WW8462c" name="페이지-1">
+        <mxGraphModel dx="2327" dy="1396" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3300" pageHeight="4681" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="178" value="" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="179" target="184" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1595" y="555" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="179" value="Boot Seq&lt;br&gt;FW check" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1535" y="465" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="180" value="New F/W&lt;br&gt;YES" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="184" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1595" y="728" as="targetPoint"/>
+                        <mxPoint x="1595" y="675" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="184" value="New FW? (Image data 포함)&lt;br&gt;Ext Flash - Version &amp;amp; Update Flag비교" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1430" y="568" width="330" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="185" value="NO" style="edgeStyle=elbowEdgeStyle;elbow=horizontal;endArrow=classic;html=1;curved=0;rounded=0;endSize=8;startSize=8;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="184" target="198" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1390" y="1149" as="sourcePoint"/>
+                        <mxPoint x="1255" y="915" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1920" y="705"/>
+                            <mxPoint x="2045" y="755"/>
+                            <mxPoint x="1255" y="1064"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="198" value="End" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1860" y="775" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="205" value="Ext Flash -&amp;gt; Int Flash &lt;br&gt;New FW copy" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="825" width="190" height="67" as="geometry"/>
+                </mxCell>
+                <mxCell id="206" value="" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="205" target="217" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1594.8000000000002" y="945" as="sourcePoint"/>
+                        <mxPoint x="1595" y="912" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="214" value="S/W Reset&lt;br&gt;&lt;br&gt;or&lt;br&gt;&lt;br&gt;Status Save 기록을 보고 &lt;br&gt;제어기가 HW Reset&lt;br&gt;End" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1507.5" y="1155.5" width="175" height="119.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="231" value="OK" style="edgeStyle=none;html=1;fontColor=#FFFFFF;" parent="1" source="217" target="220" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="217" value="Memory CRC @Int Flash" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1430" y="915" width="330" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="218" value="NG" style="edgeStyle=elbowEdgeStyle;elbow=horizontal;endArrow=classic;html=1;curved=0;rounded=0;endSize=8;startSize=8;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontStyle=1;fontColor=#f20d0d;" parent="1" source="217" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2060" y="1012" as="sourcePoint"/>
+                        <mxPoint x="1915" y="1025.5" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1855" y="1015.5"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="232" value="" style="edgeStyle=none;html=1;fontColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="220" target="214" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1595" y="1155.5" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="220" value="Int Flash&lt;br&gt;FW 관련 Clear" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="1055.5" width="190" height="67" as="geometry"/>
+                </mxCell>
+                <mxCell id="224" value="" style="edgeStyle=none;html=1;fontColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="222" target="205" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1595" y="818" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="222" value="Int Flash -&amp;gt; Ext Flash&lt;br&gt;Current FW copy" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="729.5" width="190" height="67" as="geometry"/>
+                </mxCell>
+                <mxCell id="236" value="이 부분이 문제.&amp;nbsp;&lt;br&gt;여기는 미정.&amp;nbsp;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=17;fontColor=#fd0d0d;" parent="1" vertex="1">
+                    <mxGeometry x="1800" y="1035" width="135" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="238" value="Ext Flash&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="1440" y="370" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="239" value="Int Flash&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="1560" y="370" width="70" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="240" value="RAM" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="1650" y="370" width="50" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="241" value="241024&lt;br&gt;해당 순서도는 V0 - Boot Seq에서&lt;br&gt;FW(Image 포함) Update 관련 내용.&amp;nbsp;&amp;nbsp;&lt;br&gt;&lt;br&gt;Image에 대해서는 ASPICE에 미포함하나, 기능은 추가." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="1670" y="453" width="320" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="261" value="" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="243" target="245" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2315" y="585" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="243" value="EV1&lt;br&gt;FW" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2245" y="495" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="244" value="High" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="245" target="257" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2305" y="765" as="targetPoint"/>
+                        <mxPoint x="2315" y="792" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="245" value="제어기 -&amp;gt; Indigo&lt;br&gt;SPI_EIRQ" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2140" y="605" width="330" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="246" value="Low" style="edgeStyle=elbowEdgeStyle;elbow=horizontal;endArrow=classic;html=1;curved=0;rounded=0;endSize=8;startSize=8;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="245" target="265" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2110" y="1266" as="sourcePoint"/>
+                        <mxPoint x="2640" y="805" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="2535" y="705"/>
+                            <mxPoint x="2765" y="872"/>
+                            <mxPoint x="1975" y="1181"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="250" value="Status Save&lt;br&gt;End" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2217.5" y="905.5" width="175" height="119.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="266" value="" style="edgeStyle=none;html=1;" parent="1" source="257" target="250" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="257" value="SPI Switch IC open&lt;br&gt;(제어기 - Ext Flash)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2210" y="768" width="190" height="67" as="geometry"/>
+                </mxCell>
+                <mxCell id="259" value="241022&lt;br&gt;해당 순서도는 V0 - Event1에서&lt;br&gt;FW Update 관련 내용.&amp;nbsp;&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2210" y="370" width="190" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="265" value="SPI Switch IC close&lt;br&gt;(Indigo - Ext Flash)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2440" y="768" width="190" height="67" as="geometry"/>
+                </mxCell>
+                <mxCell id="267" value="" style="edgeStyle=elbowEdgeStyle;elbow=horizontal;endArrow=classic;html=1;curved=0;rounded=0;endSize=8;startSize=8;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="265" target="250" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2540" y="855" as="sourcePoint"/>
+                        <mxPoint x="2500" y="915" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="2535" y="895"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="268" value="" style="endArrow=none;html=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2540" y="585" as="sourcePoint"/>
+                        <mxPoint x="2650" y="585" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="269" value="" style="endArrow=none;html=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2650" y="505" as="sourcePoint"/>
+                        <mxPoint x="2760" y="505" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="270" value="" style="endArrow=none;html=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2760" y="585" as="sourcePoint"/>
+                        <mxPoint x="2870" y="585" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="271" value="" style="endArrow=none;html=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2650" y="585" as="sourcePoint"/>
+                        <mxPoint x="2650" y="505" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="272" value="" style="endArrow=none;html=1;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="2760" y="585" as="sourcePoint"/>
+                        <mxPoint x="2760" y="505" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="273" value="Low" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2490" y="568" width="50" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="274" value="High" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2490" y="485" width="50" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="275" value="FW" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2685" y="538" width="40" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="276" value="idle" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2570" y="538" width="40" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="277" value="idle" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2790" y="538" width="40" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="278" value="SPI_EIRQ pin (GPIO21)&lt;br&gt;[제어기 -&amp;gt; Indigo]" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="2440" y="445" width="150" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="279" value="" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="280" target="295">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="530" y="200" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="280" value="Host's&lt;br&gt;FW Update Request&lt;br&gt;Start" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="110" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="281" value="F/W 변경 필요" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="295" target="292">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="530" y="350" as="targetPoint"/>
+                        <mxPoint x="530" y="320" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="282" value="" style="endArrow=none;html=1;" edge="1" parent="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="760" y="215" as="sourcePoint"/>
+                        <mxPoint x="880" y="215" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="283" value="" style="endArrow=none;html=1;" edge="1" parent="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="880" y="215" as="sourcePoint"/>
+                        <mxPoint x="880" y="155" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="284" value="" style="endArrow=none;html=1;" edge="1" parent="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="880" y="155" as="sourcePoint"/>
+                        <mxPoint x="1000" y="155" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="285" value="" style="endArrow=none;html=1;" edge="1" parent="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1000" y="215" as="sourcePoint"/>
+                        <mxPoint x="1000" y="155" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="286" value="" style="endArrow=none;html=1;" edge="1" parent="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1000" y="215" as="sourcePoint"/>
+                        <mxPoint x="1120" y="215" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="287" value="idle (low)" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="790" y="170" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="288" value="&amp;nbsp;Host&lt;br&gt;FW update&lt;br&gt;request&lt;br&gt;&amp;amp; writing&lt;br&gt;(high)" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="897" y="165" width="80" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="289" value="completed (low)" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="1020" y="170" width="90" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="290" value="0V" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="700" y="200" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="291" value="3.3V" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="700" y="140" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="292" value="[Indigo]&lt;br&gt;1. EXT_FLASH_EN pin&lt;br&gt;Output HIGH&lt;br&gt;(Int Flash - HOST 연결)&lt;br&gt;2. EXT_FLASH_EN pin&amp;nbsp;&lt;br&gt;write Status @Int Flash&lt;br&gt;Ext Flash를 사용 중이라는 상태 변수를 write" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="435" y="373" width="190" height="127" as="geometry"/>
+                </mxCell>
+                <mxCell id="293" value="" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="292">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="529.8000000000002" y="493" as="sourcePoint"/>
+                        <mxPoint x="530" y="525" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="294" value="EXT_FLASH_EN (SPI Switch IC) 예시" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="670" y="110" width="120" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="295" value="[HOST]&lt;br&gt;Int Flash의&amp;nbsp;F/W Request" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="365" y="213" width="330" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="296" value="F/W 변경 불필요" style="edgeStyle=elbowEdgeStyle;elbow=horizontal;endArrow=classic;html=1;curved=0;rounded=0;endSize=8;startSize=8;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="295" target="307">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="325" y="794" as="sourcePoint"/>
+                        <mxPoint x="325" y="625" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="190" y="709"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="297" value="" style="edgeStyle=none;html=1;fontColor=#b33232;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="298" target="302">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="530" y="620" as="sourcePoint"/>
+                        <mxPoint x="530" y="643" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="298" value="[HOST]&lt;br&gt;Int Flash에서&lt;br&gt;Pin 상태 확인 후&lt;br&gt;FW Writing..." style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="526" width="120" height="77" as="geometry"/>
+                </mxCell>
+                <mxCell id="301" value="" style="edgeStyle=none;html=1;fontColor=#b33232;" edge="1" parent="1" source="302" target="305">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="302" value="[HOST]&lt;br&gt;@Int Flash,&lt;br&gt;FW_Version,&lt;br&gt;FW_Update_Flag&lt;br&gt;변경" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="678" width="120" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="305" value="[Indigo]&lt;br&gt;EXT_FLASH_EN pin&lt;br&gt;Output LOW&lt;br&gt;&lt;br&gt;Pin Status, FW Request에 대해 Int Flash에서 Clear" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="825" width="120" height="115" as="geometry"/>
+                </mxCell>
+                <mxCell id="306" value="[Indigo]&lt;br&gt;Status Save?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="970" width="120" height="93" as="geometry"/>
+                </mxCell>
+                <mxCell id="307" value="Host's&lt;br&gt;FW Update Request&lt;br&gt;End" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="1113" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="308" value="" style="edgeStyle=none;html=1;fontColor=#b33232;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" target="306">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="530" y="940" as="sourcePoint"/>
+                        <mxPoint x="530" y="963" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="309" value="" style="edgeStyle=none;html=1;fontColor=#b33232;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" target="307">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="529.8299999999999" y="1063" as="sourcePoint"/>
+                        <mxPoint x="530.17" y="1102" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,0 +1,102 @@
+# Indigo4L
+# SC1721
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+#$  0xnnnnnnnn  FW_Request              : 0x00000000 : 신규 FW 없음, 0xFFFFFFFF : 신규 FW 있음, Indigo에서 최종 clear
+#$  0xnnnnnnnn  FW_Writing_Completed    : 0x00000000 : FW Not writing, 0xFFFFFFFF : FW Writing Completed, Host W, Indigo Read
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## FW Update Request Handler - Event 1 
+
+#^ Event1에서 수행, 1-Host의 Access Check, 2-Ext Flash 접근 권한 부여, 3-상태 저장 
+#^ HOST와의 sequence sync는 변수로만 진행. 
+
+fncBegin                            #name:FW_UPDATE_REQUEST_HANDLER# 
+
+## FW Update Request check  @ Int Flash (Sector47) 
+#? Host가 Int Flash (Sector47)에 적어둔 정보를 기반으로 Indigo에서 Control 
+i4copy  0x60000400  0x617C9000  500 # Addr, Src, Cnt - Src에서 Cnt만큼의 워드 수를 Addr로 복사, Addr = RAM, Src = Int Flash #? Argu 변경 필요. 
+
+r32 FW_Request              # FW_Request 
+i4drcheck   0xFFFFFFFF      # 
+    jmpnamed    always  0   #name:EXIT_FW_HANDLER# Host No Request 
+    jmpnamed    always  0   #name:HOST_REQUEST# Host Request 
+
+## Host Request 
+lblnamed                    #name:HOST_REQUEST#     
+
+w32 ExtFlash_Switch_Status  0xFFFFFFFF  # Host <-> Ext Flash 
+i4call Ext_Flash_Control    # SPI Switch IC 
+
+r32 FW_Update_Completed
+i4drcheck   0xFFFFFFFF
+    jmpnamed    always  0   #name:EXIT_FW_HANDLER#  Host Writing... Do Nothing. 
+    jmpnamed    always  0   #name:WRITING_COMPLETED#    Writing Completed. 
+
+lblnamed                    #name:WRITING_COMPLETED# 
+w32 ExtFlash_Switch_Status  0x00000000  # Indigo <-> Ext Flash 
+i4call  Ext_Flash_Control   # SPI Switch IC 
+
+i4call  STATUS_SAVE         # 
+
+## NO Request 
+lblnamed                    #name:EXIT_FW_HANDLER# 
+i4return
+
+
+
+
+
+
+
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+#! V2용 Code 
+	###################################################################################################################
+	###################################################################################################################
+	###################################################################################################################
+
+	#$ SCH net name : SPI_EIRQ[GPIO21] (idle - Low, FW - High)
+
+	###################################################################################################################
+	###################################################################################################################
+	###################################################################################################################
+	## FW Update Request Handler - Event 1 
+	# SAD_APPL_103 Intf_Bd_Ex_Fsh_Ctrl 
+
+	#@ Event1 
+	#^ 1. SPI_EIRQ check, 2. SPI Switch IC control (Open or Close), 3. Status Save 
+
+	fncBegin                            #name:FW_UPDATE_REQUEST_HANDLER# 
+	## SPI_EIRQ pin check 
+	#? 해당 pin은 EIRQ이므로 관련된 사항 처리할 것. 
+	rf32	0x000A8300	21 1	#path:INDIGO4L.GPIO.PIDR0 LOW#
+	i4drcheck	1		        # IF 
+		jmpnamed always 0 		#name:# 제어기 접근 요청 X 
+		jmpnamed always 0 		#name:# 제어기 접근 요청 O 
+
+	w32 ExtFlash_Switch_Status  0xFFFFFFFF  # Host <-> Ext Flash 
+	w32 ExtFlash_Switch_Status  0x00000000  # Indigo <-> Ext Flash 
+
+	## SPI Switch IC Control 
+	i4call Ext_Flash_Control    # SPI Switch IC 
+
+	## Status Save 
+	i4call  STATUS_SAVE         # 
+
+	## NO Request 
+	i4return
+#

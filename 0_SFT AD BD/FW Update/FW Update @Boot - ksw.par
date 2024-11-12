@@ -1,0 +1,217 @@
+# Indigo4L
+# SC1721
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+
+# SAD_APPL_104 - FW_Upd 
+
+#? todo ##############
+#? 명령어 argu 수정 필요 
+#? Memory CRC Fail에 대한 처리 필요 
+
+
+
+#$	0x
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## FW Update @ Boot Seq 
+
+#@ 위치 : Boot Sequence 
+
+
+fncBegin                            #name:NEW_FW_UPDATE# 
+
+## Read New FW Info, 	Ext Flash (New FW) -> RAM 
+#? Ext Flash에서 NEW_FW_Update_Flag 등 FW Info Read. (신규 FW 존재 여부)
+#? 명령어 argu 수정 필요 
+w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address, 
+
+w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+## Infinite_loop_exception_handler 
+#? 해당 부분 call addr로 처리하는 게 낫지 않나? SPI read & write에는 항상 쓰는게? 단 시간 설정을 해줘야 함. 
+
+	#? 기존 코드 문제점 : SPI에 문제가 생겨서 Read completed가 안 뜨면? 
+	#lblnamed			#name:Read_COMPLETE_2#		
+	#r32		0x60140010					# RAM.Read_C
+	#i4drcheck	0x55555555
+	#	jmpnamed	always	0	#name:Read_COMPLETE_2# CMDSEQ1의 CODE Read 수행 완료까지 대기 		
+	#	d	5000						
+
+	#? 신규 코드 : 문제가 생겨도 특정 시간까지만 loop를 돌고 빠져나옴. 
+	# Time measurement - Start 
+	w32	Time_Duration	0x00000000
+	w32	Start_Time_Duration	0x00000000	# 
+	w32	Current_Time_Duration	0x00000000 
+	i4systime
+	i4drput 32 Start_Time_Duration	# 
+
+	#@ Delay Loop - Start 
+	lblnamed						#name:WAIT_UNTIL_SPI_COMPLETED#		
+	r32	0x60140010					# RAM.Read_C
+	i4drcheck	0x55555555
+		jmpnamed	always	0		#name:KEEP_GOING_SPI#	CMDSEQ1의 CODE Read 수행 완료까지 대기 		
+		jmpnamed	always	0		#name:SPI_COMPLETED# 
+
+	lblnamed						#name:KEEP_GOING_SPI#  
+	i4drget	32	Delay_Tick			# 
+	i4drwait						# wait for DREG0 
+
+	i4systime						# DREG0 = SYSTIME() 
+	i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+
+	i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+	i4sub							# DREG0 = DREG1 - DREG0 
+	i4abs							# abs(DREG0)
+	i4drput	32	Time_Duration		# Time_Duration = DREG0 
+
+	i4drget	32	Delay_Count			# DREG1 = Time_Duration, DREG0 = Delay_Count 
+
+	# if(DREG1 >= DREG0), SPI Fail 
+	jmpnamed	>=	0				#name:SPI_FAIL# 
+		jmpnamed	always	0		#name:WAIT_UNTIL_SPI_COMPLETED# 
+	#@ Delay Loop - End 
+
+	lblnamed						#name:SPI_FAIL# 
+	w32	SPI_Error	0xFFFFFFFF		# SYS_FAULT에서 핸들링 할것?  
+
+	lblnamed						#name:WAIT_UNTIL_SPI_COMPLETED# 	
+	d	5000						# 5ms delay 
+	i4return
+#
+
+## FW_Update_Flag check 
+r32	NEW_FW_Update_Flag	
+i4drcheck	0xFFFFFFFF 		# if 0xF~F, it means "New FW exists." 
+	jmpnamed	always	0	#name:EXIT_FW_UPDATE#	@ New FW 없음 - Exit 
+
+## FW_Version check 
+r32	New_FW_Version			# DREG1 = DREG0, DREG0 = New_FW_Version 
+r32	Current_FW_Version		# DREG1 = New_FW_Version, DREG0 = Current_FW_Version 
+jmpnamed	<=	0			#name:EXIT_FW_UPDATE#	@ New_FW_Version <= Current_FW_Version, no need update. 
+
+## Int Flash -> Ext Flash. Current FW Backup. No need Memory CRC 
+#? 명령어 argu 수정 필요. 
+# 1. Int Flash -> RAM 
+w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address, 
+
+w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+# 2. RAM -> Ext Flash 
+w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address
+
+w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+## Ext Flash -> Int Flash. New FW Update. need Memory CRC 
+#? 명령어 argu 수정 필요 
+# 1. Ext Flash -> RAM 
+w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address, 
+
+w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+# 2. RAM -> Ext Flash 
+w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address
+
+w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+## Read CRC info,	Ext Flash -> RAM 
+#? 명령어 argu 수정 필요 
+w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address, 
+
+w32	0x0002C300	0x60140030		# CMDSEQ1 - CODE Read 위 설정에 대해 RAM.CODE Read 영역 수행 	
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+## Memory CRC - New FW 
+#? Memory CRC Fail에 대한 처리는 미정. 
+i4call Memory_CRC 
+
+## New_FW_Update_Flag Clear @Ext Flash 
+#? 해당 변수 있는 Sector Erase 후, 해당 주소 0x00000000 write 
+#? 명령어 argu 수정 필요 
+w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+w32	0x60140008	0x00027000		# Data Size 
+w32	0x6014000C	0x00400000		# SRC Address
+
+w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+
+w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+w32	Delay_Tick	0x00000001 		# 1us 
+i4call Infinite_loop_exception_handler 
+
+## Status Save 
+i4call Status_Save 
+
+
+## Waiting for Reset 
+w32	Delay	0xnnnnnnnn			# delay value 
+# Time measurement - Start 
+w32	Time_Duration	0x00000000
+w32	Start_Time_Duration	0x00000000	# 
+w32	Current_Time_Duration	0x00000000 
+i4systime
+i4drput 32 Start_Time_Duration	# 
+
+lblnamed		#WAITING_FOR_RESET# 
+d	100			# delay 100us 
+i4systime						# DREG0 = SYSTIME() 
+i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+i4sub							# DREG0 = DREG1 - DREG0 
+i4abs							# abs(DREG0)
+i4drput	32	Time_Duration		# Time_Duration = DREG0 
+i4drload	0x000186A0			# = 100ms , DREG1 = Time_Duration, DREG0 = 0x000186A0 
+
+
+
+
+lblnamed					#name:EXIT_FW_UPDATE# 
+fncEnd						#name:NEW_FW_UPDATE# 
+
+

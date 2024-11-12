@@ -1,0 +1,86 @@
+# Indigo4L
+# SC1721
+
+
+#! Boot Seq.에서 Int. Flash -> RAM : Code, Ext. Flash -> RAM : Image. 
+
+#? 241016 - Read Fail Handling 필요 
+
+#? CMDSEQ1 사용 가능함. 
+#? Memory CRC는 Ext Flash의 Image만 해당함. 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 
+
+#? 241021 - 각 명령어 argu 정리 필요. 
+
+#$ 0xnnnnnnnn	Time_Duration			:	 
+#$ 0xnnnnnnnn	Start_Time_Duration		:
+#$ 0xnnnnnnnn	Current_Time_Duration	:
+#$ 0xnnnnnnnn	SPI_Read_Error	: Error 발생 시 0xFFFFFFFF, 정상 0x00000000 
+
+## Int Flash -> RAM (CODE COPY)
+i4copy	0x60140030	0x617C7000	500		# RAM.CODE Read = INT_Flash.Flash Read (Sector 7)
+i4copy	0x60140300	0x617C8000	2100	# RAM.CODE Write = INT_Flash.Flash Write (Sector 8)
+
+i4copy	0x60000400	0x617C9000	500		# EVENT0 
+i4copy	0x60001000	0x617CA000	1000	# EVENT1 
+i4copy	0x6000E000	0x617D7000	2000	# EVENT2 
+
+w32	0x00026000	0x00000013				# HISPI MCTRL #
+
+## Ext Flash -> RAM (IMAGE COPY)
+#? 241021 - 해당 부분은 필요하면 더 추가할 것. 
+w32	0x60140010	0x00000000		# Read C # 상태 확인 Register Clear #
+w32	0x60140004	0x60100000		# DST Address # RAM 이미지 저장 위치 #
+w32	0x60140008	0x00027000		# Data Size # Flash 이미지 Size #
+w32	0x6014000C	0x00400000		# SRC Address # Flash Memory 이미지 저장소 시작 #
+
+w32	0x0002C300	0x60140030		# CMDSEQ1 - CODE Read 위 설정에 대해 RAM.CODE Read 영역 수행 	
+
+# Time measurement - Start 
+w32	Time_Duration	0x00000000
+w32	Start_Time_Duration	0x00000000	# 
+w32	Current_Time_Duration	0x00000000 
+i4systime
+i4drput 32 Start_Time_Duration	# 
+	
+# 반복문 시작 
+lblnamed						#name:IMAGE_COPY#	
+r32	0x60140010					# RAM.Read_C
+i4drcheck	0x55555555
+	jmpnamed	always	0		#name:IMAGE_COPY_ING#	CMDSEQ1의 CODE Read 수행 완료까지 대기 		
+	jmpnamed	always	0 		#name:IMAGE_COPY_COMPLETED# 	
+	
+lblnamed						#name:IMAGE_COPY_ING#  
+d	1	
+i4systime						# DREG0 = SYSTIME() 
+i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+
+i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+i4sub							# DREG0 = DREG1 - DREG0 
+i4abs							# abs(DREG0)
+i4drput	32	Time_Duration		# Time_Duration = DREG0 
+
+i4drload	0x000186A0			# = 100ms , DREG1 = Time_Duration, DREG0 = 0x000186A0 
+
+# if(DREG1 >= DREG0), Read Fail 
+jmpnamed	>=	0				#name:IMAGE_COPY_FAIL# 
+
+jmpnamed	always	0			#name:IMAGE_COPY# 
+# 반복문 끝 
+
+lblnamed						#name:IMAGE_COPY_FAIL# 
+w32	SPI_Read_Error	0xFFFFFFFF	# SYS_FAULT에서 핸들링 할것. 
+
+lblnamed						#name:IMGAE_COPY_COMPLETED# 	
+d	5000						# 5ms delay 

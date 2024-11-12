@@ -1,0 +1,569 @@
+# Indigo4L
+# SC1721
+
+
+#^ 2024.11.10 
+
+#^ Component ID : SAD_DRI_201 
+#^ Internal Flash Address : 
+#^ RAM : 0x60140500 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 : 0x60140004, 0x60140008, 0x6014000C 
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 0x60140020 
+
+#^ UNIT 
+#^ 1. SPI_Write_Location 
+#^ 2. RAM_to_IntFlash
+#^ 3. RAM_to_ExtFlash 
+
+#? <- 해당 주석은 리팩토링 시 제거할 것. 
+#? UNIT 이름, 변수명 등 문서와 매칭되지 않는 부분 수정할 것. 
+#? Code 시작 주소 명시할 것. 
+
+#? Internal Flash - Sector Write & Sector Erase, 두 fnc에 대해 exception handler 추가 해야 할까?
+
+#$ External Flash : IS25LP128 - ISSI, 128Mb = 16MB, 256 Bytes = 1 Page, 4 KB = 1 Sector (0~4095)
+
+#$ 
+    #$ Input - Argu 
+    #$ DST Address      0x60140004      GPreg[0]    0x00040200
+    #$ Data Size        0x60140008      GPreg[1]    0x00040204
+    #$ SRC Address      0x6014000C      GPreg[2]    0x00040208
+
+    #$ Output - Argu 
+    #$ Write C          0x60140020      GPreg[31]   0x0004020C 
+
+    #$ Local Vari - Internal Flash 
+    #$ Data_Size_W      0x60140512      
+    #$ DST_Address_W    0x60140514      
+    #$ SRC_Address_W    0x60140518      
+    #$ Sector_E         0x60140552      
+#$
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+## Internal Flash - Sector Write    @ Unit - RAM_to_IntFlash 
+#@ caller - RAM_to_IntFlash 
+#! i4flashprog의 argu overwriting으로 인해 위치 상 앞으로 이동. 
+fncBegin			        #name:INTERNAL_WRITE#		
+
+d	1000			        # 1ms 	
+i4flashprog	0x00000000	0x00000000  16383	FALSE   # 16383 == 1 sector 4KB, 4096 
+d	1000                    # 1ms 	
+
+#@ loop start 
+lblnamed			        #name:CMD_Ready_Check2#		
+rf32	0x0002D010	0 1		# INDIGO4L.FLASH_CFG_CMDSEQ.STATUS_CTRL #
+i4drcheck	0x00000001		# IF 
+    jmpnamed	always	0	#name:CMD_Ready_Check2#  IF DREG0 != 0x00000001, JUMP CMD_Ready_Check2
+#@ loop end 
+
+fncEnd			            #name:INTERNAL_WRITE#		 IF DREG0 == 0x00000001, RET 
+
+
+## Internal Flash - Sector Erase    @ Unit - RAM_to_IntFlash 
+#@ caller - RAM_to_IntFlash 
+#! i4flasherase의 argu overwriting으로 인해 위치 상 앞으로 이동. 
+fncBegin                    #name:INTERNAL_SECTOR_ERASE# 
+
+i4flasherase    0   FALSE   # argu overwriting 
+
+#@ loop start,  Internal Flash - Erase 완료 될 때까지 대기, 완료 되면 반복문 탈출. 
+lblnamed			        #name:CMD_Ready_Check1#		
+rf32    0x0002D010	0 1		# INDIGO4L.FLASH_CFG_CMDSEQ.STATUS_CTRL - 주소, 비트 시작, 비트 길이 
+#$ FLASH_CFG_CMDSEQ.STATUS_CTRL
+    #$ STATUS_CTRL : Flash Status Register 
+    #$ [31] macro_rdy, R : Signals whether flash macro is ready
+    #$                   0: power_down - Flash is in power down mode
+    #$                   1: ready - Flash macro is ready
+    #$ [1] cmd_err, R : Signals command error
+    #$ [0] cmd_rdy, R : Signals whether flash macro is ready to accept new command
+i4drcheck	0x00000001		# IF [0] cmd_rdy == 0???  
+    jmpnamed	always	0   #name:CMD_Ready_Check1# IF DREG0 != 0x00000001, JUMP CMD_Ready_Check1    
+#@ loop end
+
+fncEnd                      #name:INTERNAL_SECTOR_ERASE#  IF DREG0 == 0x00000001, RET 
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 1 Unit - SPI_Write_Location 
+#@ caller - other COMPs 
+
+lblnamed        #name:SPI_Write_Location#   
+
+# Buffer Clear - #! COMP 시작에서는 모든 error 방지 차원에서 반드시 Buffer Clear 해줄 것.  
+i4bufclr    0
+i4bufclr    1
+i4bufclr    2
+i4bufclr    3
+i4bufclr    4
+i4bufclr    5
+i4bufclr    6
+i4bufclr    7
+i4bufclr    8
+i4bufclr    9
+i4bufclr    10
+i4bufclr    11
+i4bufclr    12 
+
+#% COMP 전달인자 (caller other COMPs - callee SAD_DRI_202)
+r32 0x00040200                  
+i4drput 32  0x60140004          # DST Address = GPreg[0]
+r32 0x00040204                  
+i4drput 32  0x60140008          # Data Size = GPreg[1] 
+r32 0x00040208                  
+i4drput 32  0x6014000C          # SRC Address = GPreg[2] 
+
+
+i4write	32	0x00026000	0x00000011		#path:INDIGO3X.HS_SPI.MCTRL
+#$ HS_SPI.MCTRL 
+    #$ MCTRL : HS_SPI Module Control Register
+    #$ [4] MES : Module enable status - read only라서 이 부분 수정해야 함. 
+    #$ [1] CSEN : Direct mode is enabled. Command sequencer is disabled
+    #$ [0] MEN : Module is enabled
+#
+
+## Data Size가 0인지 확인, 0이면 종료 
+i4drget	32	0x60140008          # DREG1 = DREG0, DREG0 = *(0x60140008)  # Data Size 
+i4jumprdr1notzero0	2			# IF DREG0 != 0, JUMP i4drget~          # IF Data Size != 0    
+    i4end				        # IF Data Size == 0, end 
+
+## Data Size가 1 Sector (0x1000) 보다 작은지 확인. 
+i4drget	32	0x60140008			# DREG1 = DREG0, DREG0 = *(0x60140008)  # Data Size 
+i4drand	0x00000FFF		    	# DREG0 &= 0xFFF, 1Sector (1000) 보다 작은지 Check #
+i4jumprdr1notzero0	6			# IF DREG0 != 0, JUMP, 1섹터보다 크면 점프 
+# Data size is greater than 0x00001000
+
+## Data Size가 1 Sector (0x1000) 보다 작다면, 
+i4drget	32	0x60140008			# DREG1 = DREG0, DREG0 = *(0x60140008)  # Data Size 
+i4drshiftr	12				    # DREG0 >>= 12 
+i4drput 32  0x00000028          # SW_CTRL = DREG0   #? 문제 없는지 확인 필요. 241110 
+# i4drsave	10				    # Buffer[10] = DREG0, calculated data size           #? 2번 버퍼 
+i4jumpr	7				        # 
+# JUMP -> i4drload	0x61700000		# DREG1 = DREG0, DREG0 = 0x61700000 	
+
+## Data Size가 1 Sector (0x1000) 보다 크다면, 
+i4drget	32	0x60140008			# DREG1 = DREG0, DREG0 = *(0x60140008)  # Data Size
+i4drshiftr	12				    # DREG0 >>= 12  # 
+i4dradd		0x00000001          # DREG0++
+i4drput 32  0x00000028          # SW_CTRL = DREG0   #? 문제 없는지 확인 필요. 241110  
+#i4drsave	10				    # Buffer[10] = DREG0, calculated data size           #? 2번 버퍼 
+
+## Write 영역 확인 Int. or Ext. Flash?
+i4drload	0x61700000		    # DREG1 = DREG0, DREG0 = 0x61700000
+i4drget	32	0x60140004			# DREG1 = DREG0, DREG0 = *(0x60140004)  # DST Address 
+jmpnamed	<	0x00000000	    #name:INTERNAL#     IF DREG1 < DREG0, JUMP INTERNAL 	
+# IF DREG1(0x61700000) < DREG0(DST Address), execute Internal_Flash_Write 
+
+
+#@ Unit call 
+lblnamed        #name:EXTERNAL# 
+#% UNIT 전달인자 
+r32 0x60140004                  # DST Address 
+i4drsave    0                   # Buffer[0] = DREG0, DST Address 
+r32 0x60140008                  # Data Size 
+i4drsave    1                   # Buffer[1] = DREG0, Data Size 
+r32 0x6014000C                  # SRC Address 
+i4drsave    2                   # Buffer[2] = DREG0, SRC Address 
+r32 0x00000028                  # calculated data size 
+i4drsave    3                   # Buffer[3] = DREG0, calculated data size 
+
+fncCall			#name:External_Flash_Write#		
+
+#% COMP 반환인자 - 반환인자 받은 COMP는 해당 변수를 확인하여 SPI 성공 여부를 확인해야 함. 
+i4drrestore 12                  # 0x60140020 Write C 
+i4drput 32  0x0004027C          # GPreg[31] = Write C 
+
+i4return 
+
+
+#@ Unit call 
+lblnamed		#name:INTERNAL#		
+#% UNIT 전달인자 
+r32 0x60140004                  # DST Address 
+i4drsave    0                   # Buffer[0] = DREG0, DST Address 
+r32 0x60140008                  # Data Size 
+i4drsave    1                   # Buffer[1] = DREG0, Data Size 
+r32 0x6014000C                  # SRC Address 
+i4drsave    2                   # Buffer[2] = DREG0, SRC Address 
+
+fncCall			#name:Internal_Flash_Write#		
+#% COMP 반환인자 - 반환인자 받은 COMP는 해당 변수를 확인하여 SPI 성공 여부를 확인해야 함.  
+i4drrestore 12                  # 0x60140020 Write C 
+i4drput 32  0x0004027C          # GPreg[31] = Write C 
+
+i4return
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 2 Unit - Internal Flash Write, RAM_to_IntFlash 
+#@ caller - SPI_Write_Location 
+
+#% UNIT 전달인자 
+#% Buffer[0]    DST Address     0x60140004 
+#% Buffer[1]    Data Size       0x60140008    
+#% Buffer[2]    SRC Address     0x6014000C 
+
+#% 내부 사용 : Buffer[4,5,6] 
+
+fncBegin			        #name:Internal_Flash_Write#		
+
+## Data Size가 192KB 넘는지 확인 
+i4drload	0x00030000      # DREG1 = DREG0, DREG0 = 0x00030000
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+jmpnamed    <   0x00000000	#name:OUT_OF_MEMORY#    IF DREG1 < DREG0, JUMP OUT_OF_MEMORY
+
+## Data Size가 192KB보다 작다면, 시작 
+i4drshiftr	12				# DREG0 >>= 12 
+i4jumprdr1notzero0	3		# IF DREG0 != 0, JUMP
+    i4dradd	0x00000001		# DREG0++ 	
+
+i4drsave    5			    # Buffer[5] = DREG0, calculated data size           #? 1 -> 5 
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drand		0x0003F000		# DREG0 &= 0x0003F000	
+i4drshiftr	12				# DREG0 >>= 12 
+i4drsave	4				# Buffer[4] = DREG0                                 #? 0 -> 4 
+
+#@ loop start - Sector_Erase_Loop 
+lblnamed			        #name:Sector_Erase_LOOP#		
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4]
+i4drput	16	0x60140552		# 0x60140386 = DREG0, Sector E
+
+fncCall			            #name:INTERNAL_SECTOR_ERASE#		
+
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4] 
+i4dradd		0x00000001		# DREG0++ 	
+i4drsave	4				# Buffer[4] = DREG0     
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5] 
+i4dradd		0xFFFFFFFF		# DREG0 += 0xFFFFFFFF	
+i4drsave	5				# Buffer[5] = DREG0     
+jmpnamed	notzero	0	    #name:Sector_Erase_LOOP#    IF DREG0 != 0, JUMP Sector_Erase_Loop 		
+#@ loop end   
+
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+i4drshiftr	12				# DREG0>>=12 
+i4drsave	5				# Buffer[5] = DREG0, calculated data size 
+
+## Data Size > 4KB 
+jmpnamed	notzero	0	    #name:LOOP_D#        IF DREG0 != 0, JUMP LOOP_D 
+
+## Data Size <= 4KB  
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+i4drshiftr	3				# DREG0 >>= 3 
+i4drput	16	0x60140512		# Data Size W = (16)DREG0 
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drput	32	0x60140514		# DST Address W = DREG0 	
+i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+i4drput	32	0x60140518		# SRC Address W = DREG0 	
+
+fncCall			            #name:INTERNAL_WRITE#		
+
+i4write	32	0x60140020	0x55555555      # Write C, Success_flag == 0x55555555
+
+jmpnamed	always	0	    #name:END#		
+
+#@ loop start - LOOP_D 
+lblnamed			        #name:LOOP_D#		
+i4write	16	0x60140512	0x00000200  # size, addr, data - "0200" write   만약 data가 0xFF00FF00인데 16 size로 할 경우? 	0x0000FF00  
+
+i4drrestore	0               # DREG1 = DREG0, DREG0 = Buffer[0]
+i4drput	32	0x60140514      # DST Address W = DREG0 
+i4dradd		0x00001000		# DREG0 += 0x00001000	
+i4drsave	0				# Buffer[0] = DREG0                   
+i4drrestore	2				# DREG1 = DREG0, DREG0 = Buffer[2] 
+i4drput	32	0x60140518		# SRC Address W = DREG0
+i4dradd		0x00001000		# DREG0 += 0x00001000	
+i4drsave	2				# Buffer[2] = DREG0                
+
+fncCall			            #name:INTERNAL_WRITE#		
+
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5]     
+i4dradd		0xFFFFFFFF		# DREG0 += 0xFFFFFFFF	
+i4drsave	5				# Buffer[5] = DREG0                    
+
+jmpnamed	notzero	0	    #name:LOOP_D#        IF DREG0 != 0, JUMP LOOP_D 		
+#@ loop end 
+
+## Residual data 
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+i4drand		0x00000FFF      # DREG0 &= 0xFFF 
+i4drshiftr	3				# DREG0 >>= 3
+i4drput	16	0x60140512		# Data Size W = (16)DREG0 	
+i4drrestore	0				# DREG1 = DREG0, DREG0 = Buffer[0]      
+i4drput	32	0x60140514		# DST Address W = DREG0 	
+i4drrestore	2				# DREG1 = DREG0, DREG0 = Buffer[2]      
+i4drput	32	0x60140518		# SRC Address W = DREG0 
+
+fncCall			#name:INTERNAL_WRITE#		
+
+#% UNIT 반환인자 
+i4write	32	0x60140020	0x55555555      # Write C, Success_flag == 0x55555555
+i4bufclr    12 
+i4drsave    12  
+
+jmpnamed	always	0	#name:END#		
+
+lblnamed			    #name:OUT_OF_MEMORY#		
+
+#% UNIT 반환인자 
+i4write	32	0x60140020	0x22222222      # Write C, Fail_flag == 0x22222222 		
+i4bufclr    12
+i4drsave    12 
+
+lblnamed		    	#name:END#
+fncEnd			        #name:Internal_Flash_Write#		
+
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 3 Unit - External Flash Write, RAM_to_ExtFlash
+#@ caller - SPI_Write_Location 
+
+#% UNIT 전달인자 
+#% Buffer[0]    DST Address     0x60140004 
+#% Buffer[1]    Data Size       0x60140008    
+#% Buffer[2]    SRC Address     0x6014000C 
+#% Buffer[3]    calculated data size 
+
+#% 내부 사용 : Buffer[4,5] 
+
+fncBegin			#name:External_Flash_Write#		
+
+#@ outer loop start 
+lblnamed			#name:Sector_Erase#		
+
+fncCall			    #name:Write_Start_COMPLETE#
+
+i4drput	32	0x60140014			        # Read Ready = DREG0  					
+i4write	32	0x00026038	0x00000000		# HS_SPI.DMSTART
+i4write	32	0x0002604C	0x00001841		# HS_SPI.FIFOCFG
+i4write	32	0x0002603C	0x00000004		# HS_SPI.DMBCC
+i4write	32	0x00026050	0x00000020		# HS_SPI.TXFIFO0 
+
+i4drrestore	0				            # DREG1 = DREG0, DREG0 = Buffer[0], DST Address  #? 3번 버퍼 = DST Address 
+i4drand		0x00FF0000			        # DREG0 &= 0x00FF0000
+i4drshiftr	16				            # DREG0 >>= 16 
+i4drput	32	0x00026050			        # HS_SPI.TXFIFO0 = DREG0 
+i4drrestore	0				            # DREG1 = DREG0, DREG0 = Buffer[0]  #? 3번 버퍼 = DST Address 
+i4drand		0x0000F000			        # DREG0 &= 0x0000F000
+i4drshiftr	8				            # DREG0 >>= 8 
+i4drput	32	0x00026050			        # TXFIFO0 = DREG0 
+i4write	32	0x00026050	0x00000000		# HS_SPI.TXFIFO0
+i4write	32	0x00026038	0x00000001		# HS_SPI.DMSTART
+
+    #@ inner loop start 
+    lblnamed                            #name:Read_Check_1#		
+    i4wait	250                         # 250us 
+
+    fncCall			#name:READY_Check#		
+
+    i4drcheck	0x00000000              # IF 
+        jmpnamed	always	0	#name:Read_Check_1# IF DREG0 != 0, JUMP 
+    #@ inner loop end 
+        i4drput	32	0x60140014          # IF DREG0 == 0, Read Ready = DREG0 
+
+i4drrestore	0				            # DREG1 = DREG0, DREG0 = Buffer[0]  #? 3번 버퍼 = DST Address  
+i4dradd		0x00001000			        # DREG0 += 0x1000 
+i4drsave	0				            # Buffer[0] = DREG0                 #? 3번 버퍼 = DST Address  
+i4drrestore	3				            # DREG1 = DREG0, DREG0 = Buffer[3]  #? 2번 버퍼 = calculated Data Size 
+i4dradd		0xFFFFFFFF			        # DREG0 += 0xFFFFFFFF
+i4drsave	3				            # Buffer[3] = DREG0                 #? 2번 버퍼 = calculated Data Size  
+
+jmpnamed	notzero	0	                #name:Sector_Erase#   IF DREG0 != 0, JUMP 
+#@ outer loop end 
+
+## Sector Write  
+i4drget	32	0x60140004                  # DST Address 
+i4drsave	4				            # Buffer[4] = DREG0                 #? 1번 버퍼 = DST Address 내부용  
+d	1000				                # 1ms 
+
+i4write	32	0x60140020	0x11111111		# Write C = 0x11111111
+i4write	32	0x60140018	0x00000000		# LoopCount=0
+i4drrestore 1                           # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+#i4drget	32	0x60140008			    # DREG1 = DREG0, DREG0 = *(0x60140008), Data Size 
+i4drshiftr	8				            # DREG0 >>= 8 
+i4drput	32	0x6014002C			        # Data Size CV = DREG0 
+
+#@ outer loop start 
+lblnamed			                    #name:Sector_Write#		
+
+fncCall			                        #name:Write_Start_COMPLETE#		
+
+i4drput	32	0x60140028			        # Write Ready = DREG0 
+i4write	32	0x00026038	0x00000000		# HS_SPI.DMSTART
+i4write	32	0x0002604C	0x00001841		# HS_SPI.FIFOCFG
+i4write	32	0x0002603C	0x00000104		# HS_SPI.DMBCC
+i4write	32	0x00026050	0x00000002		# HS_SPI.TXFIFO0
+i4drrestore	4				            # DREG1 = DREG0, DREG0 = Buffer[4]  #? 1번 버퍼 
+i4drand		0x00FF0000			        # DREG0 &= 0x00FF0000 
+i4drshiftr	16				            # DREG0 >>= 16
+i4drput	32	0x00026050			        # HS_SPI.TXFIFO0 
+i4drrestore	4				            # DREG1 = DREG0, DREG0 = Buffer[4]  #? 1번 버퍼 
+i4drand		0x0000FF00			        # DREG0 &= 0x0000FF00
+i4drshiftr	8				            # DREG0 >>= 8 
+# HS_SPI.TXFIFO0
+i4drput	32	0x00026050			        # TXFIFO0 = DREG0 
+i4write	32	0x00026050	0x00000000		# TXFIFO0 = 0x00 
+					
+i4drrestore	4				            # DREG1 = DREG0, DREG0 = Buffer[4]  #? 1번 버퍼 
+i4drput	32	0x60140024			        # DST C W = DREG0 
+					
+    #@ inner loop start 
+    lblnamed			                    #name:256byte_Write#		
+    i4drget	32	0x60140018			        # DREG1 = DREG0, DREG0 = *(0x60140018), Loop Count W 
+    i4drcheck	0x00000040			        # IF 
+        i4jumpr	2                           # IF DREG0 != 0x40, 
+        jmpnamed	always	0               #name:256byte_Write_END#    IF DREG0 == 0x40, 
+
+    i4drshiftl	2				            # DREG0 <<= 2 
+    i4drrestore 2                           # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+    #i4drget	32	0x6014000C			    # DREG1 = DREG0, DREG0 = *(0x6014000C), SRC Address 
+    i4dr1add0					            # DREG0 += DREG1 
+    i4drput	32	0x6014001C			        # 0x6014001C = DREG0, C SRC Address 
+
+    i4arget		0x6014001C			        # AREG = *(0x6014001C), C SRC Address 
+    i4argetindirect	32				        # DREG1 = DREG0, DREG0 = *(AREG)
+
+    i4drsave	5				            # Buffer[5] = DREG0             #? 0번 버퍼 
+    i4drand		0x000000FF			        # DREG0 &= 0xFF 
+    i4drput	32	0x00026050                  # HS_SPI.TXFIFO0
+    i4drrestore	5				            # DREG1 = DREG0, DREG0 = Buffer[5]  #? 0번 버퍼 
+    i4drand		0x0000FF00			        # DREG0 &= 0xFF00 
+    i4drshiftr	8				            # DREG0 >>= 8 
+    i4drput	32	0x00026050			        # HS_SPI.TXFIFO0
+    i4drrestore	5				            # DREG1 = DREG0, DREG0 = Buffer[5]  #? 0번 버퍼 
+    i4drand		0x00FF0000			        # DREG0 &= 0x00FF0000 
+    i4drshiftr	16				            # DREG0 >>= 16  
+    i4drput	32	0x00026050			        # HS_SPI.TXFIFO0
+    i4drrestore	5				            # DREG1 = DREG0, DREG0 = Buffer[5]  #? 0번 버퍼 
+    i4drand		0xFF000000			        # DREG0 &= 0xFF000000     
+    i4drshiftr	24				            # DREG0 >>= 24  
+    i4drput	32	0x00026050			        # HS_SPI.TXFIFO0
+    i4write	32	0x0002604C	0x00001841		# HS_SPI.FIFOCFG
+    i4drget	32	0x60140018			        # DREG1 = DREG0, DREG0 = *(0x60140018), Loop Count W 
+    i4dradd		0x00000001			        # DREG0++ 
+    i4drput	32	0x60140018			        # Loop Count W = DREG0 
+    jmpnamed	always	0	                #name:256byte_Write#		
+    #@ inner loop end 
+
+lblnamed			#name:256byte_Write_END#		
+i4write	32	0x00026038	0x00000001		# HS_SPI.DMSTART
+i4write	32	0x00026039	0x00000001		# HS_SPI.DMSTOP
+i4write	32	0x60140018	0x00000000		# Loop Count W 
+i4drget	32	0x6014001C			        # DREG1 = DREG0, DREG0 = *(0x6014001C), C SRS Address 
+i4dradd		0x00000004			        # DREG0 += 0x04 
+i4drput	32	0x6014000C			        # SrcAddress = CurrentSrcAddress
+i4drrestore	4				            # DREG1 = DREG0, DREG0 = Buffer[4]      #? 1번 버퍼 
+i4dradd		0x00000100			        # DREG0 += 0x100
+i4drsave	4				            # Buffer[4] = DREG0                     #? 1번 버퍼 
+i4drget	32	0x6014002C			        # DREG1 = DREG0, DREG0 = *(0x6014002C), Data Size CV 
+i4dradd		0xFFFFFFFF			        # DREG0 += 0xFFFFFFFF
+i4drput	32	0x6014002C                  # Data Size CV = DREG0 
+
+jmpnamed	notzero	0	#name:Sector_Write#     IF DREG0 != 0, JUMP 
+#@ outer loop end 
+
+i4write	32	0x60140020	0x33333333		# Write C = 
+
+fncCall			                        #name:Write_End_COMPLETE#		
+
+#% UNIT 반환인자 
+i4write	32	0x60140020	0x55555555      # Write C, Success_flag == 0x55555555		
+i4bufclr    12
+i4drsave    12 
+
+fncEnd			                        #name:External_Flash_Write#		
+
+
+## Sector Write Start  					
+#@ caller - RAM_to_ExtFlash 
+
+# External Flash - Write 가능 여부 확인 
+fncBegin			        #name:Write_Start_COMPLETE#		
+#@ loop start  
+lblnamed			        #name:Write_Start#		
+fncCall			            #name:Write_Enable#		
+i4wait	250			        # 250us 	
+fncCall			            #name:READY_Check#		
+i4drcheck	0x00000002      # IF 			
+    jmpnamed	always	0	#name:Write_Start#  IF DREG0 != 0x02, JUMP 
+#@ loop end 
+fncEnd			            #name:Write_Start_COMPLETE#  IF DREG0 == 0x02, RET 		
+
+## Sector Write END 
+#@ caller - RAM_to_ExtFlash 
+fncBegin			        #name:Write_End_COMPLETE#	
+#@ loop start  
+lblnamed			        #name:Write_END#		
+i4wait	250			        # 250us 	
+fncCall			            #name:Write_Disable#		
+i4wait	250			        # 250us 	
+fncCall			            #name:READY_Check#		
+i4drcheck	0x00000002		# IF DREG0 == 0x02, 			
+    i4jumprdr1zero0 2       #name:Write_END#    IF DREG0 == 0, JUMP Write_END     		
+#@ loop end 
+fncEnd			            #name:Write_End_COMPLETE#    IF DREG0 == 0x02, RET 		
+
+## Write Disable  			
+#@ caller - RAM_to_ExtFlash 		
+# WRITE DISABLE OPERATION (WRDI, 04h)
+fncBegin			#name:Write_Disable#		
+i4write	32	0x00026038	0x00000000		# HS_SPI.DMSTART
+#$ DMSTART : HS_SPI Direct Mode Start Register 
+#$ [0] START : Start Transfer, 0 No effect, 
+i4write	32	0x0002604C	0x00001811		# HS_SPI.FIFOCFG
+#$ FIFOCFG : HS_SPI FIFO Configuration Register 
+    #$ [12] TXFLSH : TX-FIFO Flush - 1: Flushes the TX-FIFO 
+    #$ [11] RXFLSH : 
+    #$ [7:4] TXFTH : TX-FIFO Threshold level 
+    #$ [3:0] RXFTH : RX-FIFO Threshold level 
+i4write	32	0x0002603C	0x00000001		# HS_SPI.DMBCC
+i4write	32	0x00026050	0x00000004		# HS_SPI.TXFIFO0
+i4write	32	0x00026038	0x00000001		# HS_SPI.DMSTART
+i4write	32	0x00026039	0x00000001		# HS_SPI.DMSTOP
+fncEnd			#name:Write_Disable#		
+
+## Write Enable  			
+#@ caller - RAM_to_ExtFlash 
+# WRITE ENABLE OPERATION (WREN, 06h)
+fncBegin			#name:Write_Enable#		
+i4write	32	0x00026038	0x00000000		# HS_SPI.DMSTART
+i4write	32	0x0002604C	0x00001811		# HS_SPI.FIFOCFG
+i4write	32	0x0002603C	0x00000001		# HS_SPI.DMBCC
+i4write	32	0x00026050	0x00000006		# HS_SPI.TXFIFO0
+i4write	32	0x00026038	0x00000001		# HS_SPI.DMSTART
+i4write	32	0x00026039	0x00000001		# HS_SPI.DMSTOP
+fncEnd			#name:Write_Enable#		
+
+## Ready Check  				
+#@ caller - RAM_to_ExtFlash 
+# External Flash - 접근 가능한 상태인지 Ext. Flash Register 확인 
+# READ STATUS REGISTER OPERATION (RDSR, 05h)
+fncBegin			#name:READY_Check#		
+i4write	32	0x00026038	0x00000000		# HS_SPI.DMSTART
+i4write	32	0x0002604C	0x00001821		# HS_SPI.FIFOCFG
+i4write	32	0x0002603C	0x00000002		# HS_SPI.DMBCC
+i4write	32	0x00026050	0x00000005		# HS_SPI.TXFIFO0
+i4write	32	0x00026050	0x00000000		# HS_SPI.TXFIFO0
+
+i4write	32	0x00026038	0x00000001		# HS_SPI.DMSTART
+i4write	32	0x00026039	0x00000001		# HS_SPI.DMSTOP
+i4drget	32	0x00026090			        # DREG1 = DREG0, DREG0 = *(RXFIFO0)
+i4drget	32	0x00026090			        # DREG1 = DREG0, DREG0 = *(RXFIFO0)
+# 0x00026090 == RXFIFO0 
+fncEnd			#name:READY_Check#		
+
+i4end
+e

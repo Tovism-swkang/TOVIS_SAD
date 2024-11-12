@@ -1,0 +1,40 @@
+# Indigo4L
+# SC1721
+
+#^ Boot Seq. 초기에 RAM 영역 변수 영역 
+#? 241005 나중에 merge 할 때 다른 영역에도 초기화해야 하는 변수들 있으면 모두 여기서 할 것. 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+fncCall     #name:Buffer_Clear# 
+fncCall     #name:Vari_Clear# 
+
+## Buffer Clear 
+fncBegin    #name:Buffer_Clear#
+i4bufclr    0
+i4bufclr    1
+i4bufclr    2
+i4bufclr    3
+i4bufclr    4
+i4bufclr    5
+i4bufclr    6
+i4bufclr    7
+i4bufclr    8
+i4bufclr    9
+i4bufclr    10
+i4bufclr    11
+i4bufclr    12
+i4bufclr    13
+i4bufclr    14
+i4bufclr    15
+fncEnd       #name:Buffer_Clear#
+
+
+## Vari Clear 
+fncBegin    #name:Vari_Clear# 
+
+w32	Clock_PLL_Error	0x00000000 # Clock_PLL_Error 변수 초기화 
+
+fncEnd      #name:Vari_Clear# 

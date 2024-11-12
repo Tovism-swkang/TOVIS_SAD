@@ -1,0 +1,36 @@
+# Indigo4L
+# SC1721
+
+
+i4flasherase    0   0 
+i4flashprog
+
+
+
+
+#w32 0x0002C300 0x6000000C
+#
+#lblnamed                                   #name:LOOP#
+### A block 
+#
+#rf32	0x0004D49C	24 1		# SEERISMVL.FRAMEGEN0.FgChStat.[24]SecSyncStat : Current status secondary channel synchronization (0 = out of sync, 1 = in sync; not locked).
+#i4drcheck	0x00000000			
+#    d   1 
+#    i4bufinc                    # Out of sync 
+#
+#    
+#
+## d 10000000
+#d 10000
+### B block 
+#
+## d 10000000
+#d 10000
+#
+#jmpnamed always 0                          #name:LOOP#
+i4end
+
+
+e
+
+

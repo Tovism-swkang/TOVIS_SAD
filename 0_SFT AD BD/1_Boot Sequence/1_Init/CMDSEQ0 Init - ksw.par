@@ -1,0 +1,48 @@
+# Indigo4L
+# SC1721
+
+#^
+    #^ 
+#^ 
+
+#? 241007 - CMDSEQ_SELn 재설정 필요 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+fncCall 	#name:CMDSEQ_EVENT#	
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## CMDSEQ INIT 
+
+#$ 
+    #$  0x00000CFC  IRQ_CMDSEQ_SEL0
+    #$  [24:16] cmdseq_irqsel1 RW 0x1FF Select interrupt for command sequencer event input 1
+    #$  [8:0] cmdseq_irqsel0 RW 0x1FF Select interrupt for command sequencer event input 0
+    #$  0x00000D00  IRQ_CMDSEQ_SEL1
+    #$  [24:16] cmdseq_irqsel3 RW 0x1FF Select interrupt for command sequencer event input 3
+    #$  [8:0] cmdseq_irqsel2 RW 0x1FF Select interrupt for command sequencer event input 2
+    #$  0x00000D04  IRQ_CMDSEQ_SEL2
+    #$  [24:16] cmdseq_irqsel5 RW 0x1FF Select interrupt for command sequencer event input 5
+    #$  [8:0] cmdseq_irqsel4 RW 0x1FF Select interrupt for command sequencer event input 4
+    #$  0x00000D08  IRQ_CMDSEQ_SEL3
+    #$  [8:0] cmdseq_irqsel6 RW 0x1FF Select interrupt for command sequencer event input 6
+#$
+
+#w32 0x00000850  0x00000005      # GC_PIN.GPIO20_CTL.EIRQ_4#    I2C_EIRQ - EIRQ_4 , 경고등 
+#w32 0x00000854  0x00000005      # GC_PIN.GPIO21_CTL.EIRQ_5#    SPI_EIRQ - EIRQ_5 , FW update 
+
+# RLT 
+
+fncBegin	#name:CMDSEQ_EVENT#	
+w32	0x00000CFC	0x00230022		# GC_INT.IRQ_CMDSEQ_SEL0#
+w32	0x00000D00	0x00250024		# GC_INT.IRQ_CMDSEQ_SEL1#
+w32	0x00000D04	0x00270026		# GC_INT.IRQ_CMDSEQ_SEL2#
+w32	0x00000D08	0x00000028		# GC_INT.IRQ_CMDSEQ_SEL3#
+fncEnd		#name:CMDSEQ_EVENT#	
+
+
+

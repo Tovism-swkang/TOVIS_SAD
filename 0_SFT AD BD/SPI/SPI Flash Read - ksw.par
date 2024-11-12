@@ -1,0 +1,383 @@
+# Indigo4L
+# SC1721
+
+
+#^ 2024.11.10 
+
+#^ Component ID : SAD_DRI_202 
+#^ Internal Flash Address : 
+#^ RAM : 0x60140100 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 : 0x60140004, 0x60140008, 0x6014000C 
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 0x60140020 
+
+#^ UNIT 
+#^ 1. SPI_Read_Location 
+#^ 2. IntFlash_to_RAM
+#^ 3. ExtFlash_to_RAM
+
+#? <- 해당 주석은 리팩토링 시 제거할 것. 
+#? UNIT 이름, 변수명 등 문서와 매칭되지 않는 부분 수정할 것. 
+#? Code 시작 주소 명시할 것. RAM, Int Flash 
+
+#$ External Flash : IS25LP128 - ISSI, 128Mb = 16MB, 256 Bytes = 1 Page, 4 KB = 1 Sector (0~4095)
+
+#$ 
+    #$ Input - Argu 
+    #$ DST Address      0x60140004      GPreg[0]    0x00040200
+    #$ Data Size        0x60140008      GPreg[1]    0x00040204
+    #$ SRC Address      0x6014000C      GPreg[2]    0x00040208
+
+    #$ Output - Argu 
+    #$ Read C          0x60140010      GPreg[31]   0x0004020C 
+
+    #$ Local Vari - Internal Flash 
+    #$ Data_Size_R      0x60140102  
+    #$ DST_Address_R    0x60140104      
+    #$ SRC_Address_R    0x60140108       
+#$
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+#! i4copy의 argu overwriting으로 인해 위치 상 앞으로 이동. 
+fncBegin			#name:COPY_FUNC#
+i4copy	0x60000000  0x70000000	0	
+fncEnd				#name:COPY_FUNC#
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 1 Unit - SPI_Read_Location 
+#@ caller - other COMPs 
+
+lblnamed        #name:SPI_Read_Location# 
+
+# Buffer Clear - #! COMP 시작에서는 모든 error 방지 차원에서 반드시 Buffer Clear 해줄 것.  
+i4bufclr    0
+i4bufclr    1
+i4bufclr    2
+i4bufclr    3
+i4bufclr    4
+i4bufclr    5
+i4bufclr    6
+i4bufclr    7
+i4bufclr    8
+i4bufclr    9
+i4bufclr    10
+i4bufclr    11
+i4bufclr    12 
+
+#% COMP 전달인자 (caller other COMPs - callee SAD_DRI_202)
+r32 0x00040200                  
+i4drput 32  0x60140004          # DST Address = GPreg[0]
+r32 0x00040204                  
+i4drput 32  0x60140008          # Data Size = GPreg[1] 
+r32 0x00040208                  
+i4drput 32  0x6014000C          # SRC Address = GPreg[2] 
+
+w32		0x00026000	0x00000013		# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+#$ HS_SPI.MCTRL : 
+    #$ [4] MES : Module enable status 
+    #$ [1] CSEN : CMDSEQ Enabled 
+    #$ [0] MEN : Module Enabled 
+#
+
+## Read 영역 확인 Int. or Ext. Flash?
+i4drload	0x61700000		    # DREG1 = DREG0, DREG0 = 0x61700000
+i4drget	32	0x6014000C			# DREG1 = DREG0, DREG0 = *(0x6014000C)  # SRC Address 
+jmpnamed	<	0x00000000	    #name:INTERNAL#     IF DREG1 < DREG0, JUMP INTERNAL 	
+# IF DREG1(0x61700000) < DREG0(SRC Address), execute Internal_Flash_Read  
+
+#@ Unit Call 
+lblnamed        #name:EXTERNAL# 
+#% UNIT 전달인자 
+r32 0x60140004                  # DST Address 
+i4drsave    0                   # Buffer[0] = DREG0, DST Address, 
+r32 0x60140008                  # Data Size 
+i4drsave    1                   # Buffer[1] = DREG0, Data Size 
+r32 0x6014000C                  # SRC Address 
+i4drsave    2                   # Buffer[2] = DREG0, SRC Address 
+
+fncCall         #name:External_Flash_Read# 
+
+#% COMP 반환인자 - 반환인자 받은 COMP는 해당 변수를 확인하여 SPI 성공 여부를 확인해야 함. 
+i4drrestore 12                  # 0x60140010 Read C 
+i4drput 32  0x0004027C          # GPreg[31] = Read C 
+
+i4return 
+
+
+
+#@ Unit Call 
+lblnamed        #name:INTERNAL# 
+#% UNIT 전달인자 
+r32 0x60140004                  # DST Address 
+i4drsave    0                   # Buffer[0] = DREG0, DST Address, 
+r32 0x60140008                  # Data Size 
+i4drsave    1                   # Buffer[1] = DREG0, Data Size 
+r32 0x6014000C                  # SRC Address 
+i4drsave    2                   # Buffer[2] = DREG0, SRC Address 
+
+fncCall         #name:Internal_Flash_Read# 
+
+#% COMP 반환인자 - 반환인자 받은 COMP는 해당 변수를 확인하여 SPI 성공 여부를 확인해야 함. 
+i4drrestore 12                  # 0x60140010 Read C 
+i4drput 32  0x0004027C          # GPreg[31] = Read C 
+
+i4return 
+
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 2 Unit - Internal Flash Read, IntFlash_to_RAM 
+#@ caller - SPI_Read_Location 
+
+#% UNIT 전달인자 
+#% Buffer[0]    DST Address     0x60140004 
+#% Buffer[1]    Data Size       0x60140008    
+#% Buffer[2]    SRC Address     0x6014000C 
+
+#% 내부 사용 : Buffer[3,4,5] 
+#% Buffer[3]    calculated data size 
+#% Buffer[4]    calculated DST Address 
+#% Buffer[5]    calculated SRC Address 
+
+fncBegin            #name:Internal_Flash_Read# 
+
+## Read할 Data Size가 192KB 넘으면 Out of memory
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drload	0x00030000		# DREG1 = DREG0, DREG0 = 0x00030000
+jmpnamed	>	0x00000000	#name:INT_OUT_OF_MEMORY#	IF DREG1 > DREG0, JUMP OUT_OF_MEMORY # Data Size > 0x30000 == out of memory, 192KB 이상 
+
+## Read할 Data Size가 1 Sector(=4KB)를 넘으면, JUMP 
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drload	0x00000FFF		# DREG1 = DREG0, DREG0 = 0x00000FFF
+jmpnamed	>	0x00000000	#name:INT_CHECK_COUNT#		IF DREG1 > DREG0, JUMP CHECK_COUNT 
+
+## Data Size <= 0xFFF, start # 읽어야 할 크기가 0xFFF보다 작거나 같으면,(1섹터 이내) 
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+i4drput	16	0x60140102		# Data Size R = DREG0 	                # Data Size R, Data Size R == Data Size  
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	                # DST Address R, DST Address R = DST Address 
+i4drload	0x61700000		# DREG1 = DREG0, DREG0 = 0x61700000     # 
+i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+
+i4jumprdr1less0	3			# IF DREG1(0x61700000) < DREG0(SRC Address), JUMP 
+    i4dradd		0x70000000		# DREG0 += 0x70000000 # IF 0x61700000 >= SRC Address, SRC Address R += 0x7000 0000 
+    i4drput	32	0x60140108		# SRC Address R = DREG0    # SRC Address R # IF 0x6170 0000 < SRC Address, SRC Address R = SRC Address 
+
+#@ caller - IntFlash_to_RAM 
+fncCall		#name:COPY_FUNC#
+
+#% UNIT 반환인자 
+i4write	32	0x60140010	0x55555555	# OK END???? 	# Read C 
+i4bufclr    12 
+i4drsave    12 
+jmpnamed    always  0       #name:INT_END# 
+
+
+## Data Size > 0xFFF, start # 읽어야할 크기가 0xFFF보다 크면,(1섹터보다 크면) 여기 시작 
+lblnamed			        #name:INT_CHECK_COUNT#		
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drand		0x0003F000		# DREG0 &= 0x0003F000	
+i4drshiftr	12				# DREG0 >>= 12 
+i4drsave	3				# Buffer[3] = DREG0, calculated data size 
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drsave	4				# Buffer[4] = DREG0, calculated DST Address
+i4drload	0x61700000		# DREG1 = DREG0, DREG0 = 0x61700000	
+i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+
+i4jumprdr1less0	3			# IF  
+    i4dradd		0x70000000		# DREG0 += 0x70000000	
+
+i4drsave	5				# Buffer[5] = DREG0, calculated SRC Address
+
+#@ loop start - Flash to RAM 
+lblnamed			#name:INT_COPY_LOOP#		
+i4write	16	0x60140102	0x00001000  # Data Size R 
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4], calculated DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5], calculated SRC Address 
+i4drput	32	0x60140108		# SRC Address R = DREG0 	
+    
+fncCall		#name:COPY_FUNC#			
+
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4], calculated DST Address 
+i4dradd		0x00001000		# DREG0 += 0x00001000			
+i4drsave	4				# Buffer[4] = DREG0, calculated DST Address 
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5], calculated SRC Address 
+i4dradd		0x00001000		# DREG0 += 0x00001000						
+i4drsave	5				# Buffer[5] = DREG0, calculated SRC Address 
+i4drrestore	3				# DREG1 = DREG0, DREG0 = Buffer[3], calculated data size 
+i4dradd		0xFFFFFFFF		# DREG0 += 0xFFFFFFFF	
+
+i4drsave	3				# Buffer[3] = DREG0, calculated data size
+jmpnamed	notzero	0	#name:INT_COPY_LOOP#		 IF DREG0 != 0, JUMP COPY_LOOP
+#@ loop end 
+
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size 
+i4drand		0x000007FF		# DREG0 &= 0x000007FF
+
+jmpnamed	zero 	0	    #name:INT_OK_END#   IF DREG0 == 0, JUMP  # 읽어야 할 Data Size가 0. 즉 Read 동작 더 이상 불필요하므로 종료. 
+
+## Residual data 
+i4drput	16	0x60140102		# Data Size R = DREG0    # Data Size R 
+i4drrestore	4				# DREG0 = Buffer[4], calculated DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	# DST Address R 	
+i4drrestore	5				# DREG0 = Buffer[5], calculated SRC Address 
+i4drput	32	0x60140108		# SRC Address R = DREG0 	# SRC Address R 	
+
+fncCall		#name:COPY_FUNC#
+
+jmpnamed	always	0	#name:INT_OK_END#
+
+lblnamed			#name:INT_OUT_OF_MEMORY#		
+#% UNIT 반환 인자 
+i4write	32	0x60140010	0x11111111		# Read C # 0x11111111이면 error flag? 
+i4bufclr    12
+i4drsave    12 
+jmpnamed    always  0   #name:INT_END# 
+
+lblnamed			#name:INT_OK_END#		
+#% UNIT 반환 인자 
+i4write	32	0x60140010	0x55555555		# Read C #  0x55555555이면 pass flag? 
+i4bufclr    12 
+i4drsave    12 
+
+lblnamed            #name:INT_END# 
+fncEnd              #name:Internal_Flash_Read#
+
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 3 Unit - External Flash Read, ExtFlash_to_RAM 
+#@ caller - SPI_Read_Location 
+
+
+#% UNIT 전달인자 
+#% Buffer[0]    DST Address     0x60140004 
+#% Buffer[1]    Data Size       0x60140008    
+#% Buffer[2]    SRC Address     0x6014000C 
+
+#% 내부 사용 : Buffer[3,4,5] 
+#% Buffer[3]    calculated data size 
+#% Buffer[4]    calculated DST Address 
+#% Buffer[5]    calculated SRC Address 
+
+fncBegin            #name:External_Flash_Read# 
+
+## Read할 Data Size가 192KB 넘으면 Out of memory
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drload	0x00030000		# DREG1 = DREG0, DREG0 = 0x00030000
+jmpnamed	>	0x00000000	#name:EXT_OUT_OF_MEMORY#	IF DREG1 > DREG0, JUMP OUT_OF_MEMORY # Data Size > 0x30000 == out of memory, 192KB 이상 
+
+## Read할 Data Size가 1 Sector(=4KB)를 넘으면, JUMP 
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drload	0x00000FFF		# DREG1 = DREG0, DREG0 = 0x00000FFF
+jmpnamed	>	0x00000000	#name:EXT_CHECK_COUNT#		IF DREG1 > DREG0, JUMP CHECK_COUNT 
+
+## Data Size <= 0xFFF, start # 읽어야 할 크기가 0xFFF보다 작거나 같으면,(1섹터 이내) 
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
+i4drput	16	0x60140102		# Data Size R = DREG0 	                # Data Size R, Data Size R == Data Size  
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	                # DST Address R, DST Address R = DST Address 
+i4drload	0x61700000		# DREG1 = DREG0, DREG0 = 0x61700000     # 
+i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+
+i4jumprdr1less0	3			# IF DREG1(0x61700000) < DREG0(SRC Address), JUMP 
+    i4dradd		0x70000000		# DREG0 += 0x70000000 # IF 0x61700000 >= SRC Address, SRC Address R += 0x7000 0000 
+    i4drput	32	0x60140108		# SRC Address R = DREG0    # SRC Address R # IF 0x6170 0000 < SRC Address, SRC Address R = SRC Address 
+
+#@ caller - EXTFlash_to_RAM 
+fncCall		#name:COPY_FUNC#
+
+#% UNIT 반환인자 
+i4write	32	0x60140010	0x55555555	# OK END???? 	# Read C 
+i4bufclr    12 
+i4drsave    12 
+jmpnamed    always  0       #name:EXT_END# 
+
+
+## Data Size > 0xFFF, start # 읽어야할 크기가 0xFFF보다 크면,(1섹터보다 크면) 여기 시작 
+lblnamed			        #name:EXT_CHECK_COUNT#		
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size
+i4drand		0x0003F000		# DREG0 &= 0x0003F000	
+i4drshiftr	12				# DREG0 >>= 12 
+i4drsave	3				# Buffer[3] = DREG0, calculated data size 
+i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
+i4drsave	4				# Buffer[4] = DREG0, calculated DST Address
+i4drload	0x61700000		# DREG1 = DREG0, DREG0 = 0x61700000	
+i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
+
+i4jumprdr1less0	3			# IF  
+    i4dradd		0x70000000		# DREG0 += 0x70000000	
+
+i4drsave	5				# Buffer[5] = DREG0, calculated SRC Address
+
+#@ loop start 
+lblnamed			#name:EXT_COPY_LOOP#		
+i4write	16	0x60140102	0x00001000  # Data Size R 
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4], calculated DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5], calculated SRC Address 
+i4drput	32	0x60140108		# SRC Address R = DREG0 	
+    
+fncCall		#name:COPY_FUNC#			
+
+i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4], calculated DST Address 
+i4dradd		0x00001000		# DREG0 += 0x00001000			
+i4drsave	4				# Buffer[4] = DREG0, calculated DST Address 
+i4drrestore	5				# DREG1 = DREG0, DREG0 = Buffer[5], calculated SRC Address 
+i4dradd		0x00001000		# DREG0 += 0x00001000						
+i4drsave	5				# Buffer[5] = DREG0, calculated SRC Address 
+i4drrestore	3				# DREG1 = DREG0, DREG0 = Buffer[3], calculated data size 
+i4dradd		0xFFFFFFFF		# DREG0 += 0xFFFFFFFF	
+
+i4drsave	3				# Buffer[3] = DREG0, calculated data size
+jmpnamed	notzero	0	#name:EXT_COPY_LOOP#		 IF DREG0 != 0, JUMP COPY_LOOP
+#@ loop end 
+
+i4drrestore 1               # DREG1 = DREG0, DREG0 = Data Size 
+i4drand		0x000007FF		# DREG0 &= 0x000007FF
+
+jmpnamed	zero 	0	    #name:EXT_OK_END#   IF DREG0 == 0, JUMP  # 읽어야 할 Data Size가 0. 즉 Read 동작 더 이상 불필요하므로 종료. 
+
+## Residual data 
+i4drput	16	0x60140102		# Data Size R = DREG0    # Data Size R 
+i4drrestore	4				# DREG0 = Buffer[4], calculated DST Address 
+i4drput	32	0x60140104		# DST Address R = DREG0 	# DST Address R 	
+i4drrestore	5				# DREG0 = Buffer[5], calculated SRC Address 
+i4drput	32	0x60140108		# SRC Address R = DREG0 	# SRC Address R 	
+
+fncCall		#name:COPY_FUNC#
+
+jmpnamed	always	0	#name:EXT_OK_END#
+
+lblnamed			#name:EXT_OUT_OF_MEMORY#		
+#% UNIT 반환 인자 
+i4write	32	0x60140010	0x11111111		# Read C # 0x11111111이면 error flag? 
+i4bufclr    12
+i4drsave    12 
+jmpnamed    always  0   #name:EXT_END# 
+
+lblnamed			#name:EXT_OK_END#		
+#% UNIT 반환 인자 
+i4write	32	0x60140010	0x55555555		# Read C #  0x55555555이면 pass flag? 
+i4bufclr    12 
+i4drsave    12 
+
+lblnamed            #name:EXT_END# 
+fncEnd              #name:External_Flash_Read#
+
+i4end
+e 

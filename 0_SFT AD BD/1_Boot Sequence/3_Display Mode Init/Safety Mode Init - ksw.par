@@ -1,0 +1,501 @@
+# Indigo4L
+# SC1721
+
+
+
+
+
+#? 명령어 argu 수정 필요 
+#? Safety Mode에서 Layer 몇개 사용할지??? 
+#? 1. NO SIGNAL 화면 중앙 
+#? 2~3. 좌, 우 방향등 각각 - Blinking 
+#? 4. 좌측 하단 문구 
+#? 5. 우측 하단 문구
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+## Safety Mode Init 
+
+
+
+## FPD 해제 TEST FRAMEGEN 연결 
+w32		0x00043808	0x00000101		# SEERISMVL.EXTSRC4.STATICCONTROL#
+
+wf32	0x00000410	0 1 0 			# GC_CLK.CLK_ENABLE.SEERIS_PIXCLK0_EN#
+w32		0x00041008	0x00000004		# SEERISMVL.TESTFRAMEGEN0.STATICCONTROL#
+wf32	0x00040808	0 1 0			# SEERISMVL.FRAMECAP4.STATICCONTROL.CEN#
+w32		0x0004D48C	0x00000000		# SEERISMVL.FRAMEGEN0.FGENABLE#
+wf32	0x00000418	9 1 0			# GC_CLK.SERRESET.CAP_PLLRESETN#
+w32		0x0004101C	0x00300780		# SEERISMVL.TESTFRAMEGEN0.HORIZONTALCFG0#
+w32		0x00041020	0x00900020		# SEERISMVL.TESTFRAMEGEN0.HORIZONTALCFG1#
+w32		0x00041024	0x000F02D0		# SEERISMVL.TESTFRAMEGEN0.VERTICALCFG0#
+w32		0x00041028	0x001A0005		# SEERISMVL.TESTFRAMEGEN0.VERTICALCFG1#
+w32		0x00041010	0x00F00011		# SEERISMVL.TESTFRAMEGEN0.TESTFRAME#
+w32		0x00041200	0x00300C03		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_0#
+w32		0x00041204	0x3FF00C03		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_1#
+w32		0x00041208	0x003FFC03		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_2#
+w32		0x0004120C	0x00300FFF		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_3#
+w32		0x00041210	0x003FFFFF		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_4#
+w32		0x00041214	0x3FF00FFF		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_5#
+w32		0x00041218	0x3FFFFC03		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_6#
+w32		0x0004121C	0x3FFFFFFF		# SEERISMVL.TESTFRAMEGEN0.COLORRAM_7#
+w32		0x0004102C	0x002C0015		# SEERISMVL.TESTFRAMEGEN0.BURSTSHAPE#
+wf32	0x00000400	28 1 0			# GC_CLK.CLOCK_SELECTION.PIXCLK0_SEL#
+wf32	0x00000400	29 1 1			# GC_CLK.CLOCK_SELECTION.CAP_CLKSEL#
+wf32	0x00040400	0 4 8			# SEERISMVL.CAPENGCFG.CAPTURECONTROL.INPUT_SELECT0#
+w32		0x0004080C	0x02CF077F		# SEERISMVL.FRAMECAP4.INPUTSIZE#
+w32		0x00040810	0x02CF077F		# SEERISMVL.FRAMECAP4.OUTPUTSIZE#
+w32		0x00043814	0x08080800		# SEERISMVL.EXTSRC4.COLORCOMPONENTBITS#
+w32		0x00043818	0x00081018		# SEERISMVL.EXTSRC4.COLORCOMPONENTSHIFT#
+w32		0x00043824	0x00000001		# SEERISMVL.EXTSRC4.CONTROLTRIGGER#
+
+wf32	0x00000418	9 1 1			# GC_CLK.SERRESET.CAP_PLLRESETN#
+w32		0x00043824	0x00000001		# SEERISMVL.EXTSRC4.CONTROLTRIGGER#
+w32		0x00042074	0x00000001		# SEERISMVL.PIXENGCFG.EXTDST4_TRIGGER#
+w32		0x0004D480	0x00000005		# SEERISMVL.FRAMEGEN0.FGINCTRL#
+w32		0x0004D48C	0x00000001		# SEERISMVL.FRAMEGEN0.FGENABLE#
+wf32	0x00040808	0 1 1			# SEERISMVL.FRAMECAP4.STATICCONTROL.CEN#
+w32		0x00041008	0x00000007		# SEERISMVL.TESTFRAMEGEN0.STATICCONTROL#
+wf32	0x00000410	0 1 1			# GC_CLK.CLK_ENABLE.SEERIS_PIXCLK0_EN#
+w32		0x00041030	0x00000001		# SEERISMVL.TESTFRAMEGEN0.SHADOWLOAD#
+
+## Safety Mode Reg Init 
+#! Safety Mode에 맞게 Fetch layer 재설정. 
+d	100	
+fncCall 		#name:SM_FETCH_0#			
+fncCall 		#name:SM_FETCH_1#			
+fncCall 		#name:SM_FETCH_2#			
+fncCall 		#name:SM_FETCH_3#			
+fncCall 		#name:SM_FETCH_4#			
+fncCall 		#name:SM_FETCH_5#			
+fncCall 		#name:SM_FETCH_6#			
+fncCall 		#name:SM_FETCH_7#			
+fncCall 		#name:SM_FETCH_8#			
+fncCall 		#name:SM_FETCH_9#			
+fncCall 		#name:SM_FETCH_10#			
+fncCall 		#name:SM_FETCH_11#			
+fncCall 		#name:SM_FETCH_12#			
+fncCall 		#name:SM_FETCH_13#			
+fncCall 		#name:SM_FETCH_14#			
+fncCall 		#name:SM_FETCH_15#			
+d	100	
+
+#$ SRAM 변수 초기화 - Fault Status 
+w32	0x60000290	0x11111111		# NO SIGNAL SF 
+w32	0x60000294	0x11111111		# SafetyMode 
+w32	0x60000298	0x11111111		# Load 1 
+w32	0x6000029C	0x11111111		# Load 2 
+w32	0x600002A0	0x11111111		# Load 3 
+w32	0x600002A4	0x11111111		# Car 
+w32	0x600002A8	0x11111111		# D 
+w32	0x600002AC	0x11111111		# 속도 10 단위 
+w32	0x600002B0	0x11111111		# 
+w32	0x600002B4	0x11111111		# 
+w32	0x600002B8	0x11111111		# 
+w32	0x600002BC	0x11111111		# 
+w32	0x600002C0	0x11111111		# 
+w32	0x600002C4	0x11111111		# 
+w32	0x600002C8	0x11111111		# 
+w32	0x600002CC	0x11111111		# ESC 					
+w32	0x600002D0	0x00000010		# Safety Mode Count 
+w32	0x600002D4	0x00000018		# 
+w32	0x600002D8	0x00000018		# 
+w32	0x600002DC	0x00000018		# 
+w32	0x600002E0	0x00000005		# 
+w32	0x600002E4	0x00000000		# 
+w32	0x600002E8	0x00000001		# 
+w32	0x600002EC	0x00000002		# RPM 1단위 Count 
+w32	0x600002F0	0x0000000A		# 좌 방향등 Count 
+w32	0x600002F4	0x0000000A		# 우 방향등 Count 
+
+d	100	
+w32	0x600003DC	0x11111111		# SRAM.SafetyModeCount 
+
+lblnamed 		#name:Panic_END#		
+i4end
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Safety Mode Image Init. 
+#! Fetch0~15, fnc 정의부, Safety Mode 진입을 위해 Fetchlayer 재설정 (Safety Mode 첫 진입 시 영상을 위함.)
+
+#$ Variable & Reg 
+#$ SRAM 예비 영역 
+#$ 0x60180000	NO SIGNAL SF 
+
+#$ 0x0004A800 Fetch Layer 
+
+## FetchLayer0 재설정 - 좌측 하단 NO SIGNAL 빨간 문구 
+# SRAM.NO SIGNAL SF - FetchLayer.LayerProperty0 
+fncBegin		#name:FETCH_0#			
+w32	0x0004A818	0x60180000		# BaseAddress0 - SRAM.NO SIGNAL SF
+w32	0x0004A828	0x000400C5		# SourceBufferAttributes0 
+w32	0x0004A82C	0x004F018B		# SourceBufferDimension0 
+w32	0x0004A830	0x08080808		# ColorComponentBits0
+w32	0x0004A834	0x08181000		# ColorComponentShift0
+w32	0x0004A838	0x02580032		# LayerOffset0
+w32	0x0004A848	0x80000101		# LayerProperty0
+w32	0x0004AC00	0x0000FF00		# ColorPalette_ 
+w32	0x0004AC04	0x0000FF15		# ColorPalette_ 
+w32	0x0004AC08	0x0000FF26		# ColorPalette_
+w32	0x0004AC0C	0x0000FF37		# ColorPalette_ 
+w32	0x0004AC10	0x0000FF46		# ColorPalette_ 
+w32	0x0004AC14	0x0000FF5A		# ColorPalette_ 
+w32	0x0004AC18	0x0000FF67		# ColorPalette_ 
+w32	0x0004AC1C	0x0000FF75		# ColorPalette_ 
+w32	0x0004AC20	0x0000FF8E		# ColorPalette_ 
+w32	0x0004AC24	0x0000FFA2		# ColorPalette_ 
+w32	0x0004AC28	0x0000FFB5		# ColorPalette_ 
+w32	0x0004AC2C	0x0000FFC6		# ColorPalette_ 
+w32	0x0004AC30	0x0000FFD7		# ColorPalette_ 
+w32	0x0004AC34	0x0000FFE9		# ColorPalette_ 
+w32	0x0004AC38	0x0000FFFE		# ColorPalette_ 
+w32	0x0004AC3C	0x0000FFFF		# ColorPalette_
+fncEnd			#name:FETCH_0#			
+
+## FetchLayer1 재설정 - 우측 하단 SAFETY MODE 녹색 문구 
+# SRAM.SAFETY MODE SF - FetchLayer.LayerProperty1 
+fncBegin		#name:FETCH_1#			
+w32	0x0004A850	0x60184000		# BaseAddress1 - SRAM.SAFETY MODE SF
+w32	0x0004A860	0x000400F9		# SourceBufferAttributes1
+w32	0x0004A864	0x004F01F3		# SourceBufferDimension1 
+w32	0x0004A868	0x08080808		# ColorComponentBits1
+w32	0x0004A86C	0x18100800		# ColorComponentShift1
+w32	0x0004A870	0x02580578		# LayerOffset1
+w32	0x0004A880	0x00000101		# LayerProperty1					
+w32	0x0004AC40	0x00FF0000		# ColorPalette_  
+w32	0x0004AC44	0x00FF0014		# ColorPalette_
+w32	0x0004AC48	0x00FF0026		# ColorPalette_
+w32	0x0004AC4C	0x00FF0035		# ColorPalette_
+w32	0x0004AC50	0x00FF0045		# ColorPalette_
+w32	0x0004AC54	0x00FF0059		# ColorPalette_
+w32	0x0004AC58	0x00FF0069		# ColorPalette_
+w32	0x0004AC5C	0x00FF0074		# ColorPalette_
+w32	0x0004AC60	0x00FF0087		# ColorPalette_
+w32	0x0004AC64	0x00FF0096		# ColorPalette_
+w32	0x0004AC68	0x00FF00B0		# ColorPalette_
+w32	0x0004AC6C	0x00FF00C7		# ColorPalette_
+w32	0x0004AC70	0x00FF00D7		# ColorPalette_
+w32	0x0004AC74	0x00FF00E9		# ColorPalette_
+w32	0x0004AC78	0x00FF00FE		# ColorPalette_
+w32	0x0004AC7C	0x00FF00FF		# ColorPalette_
+fncEnd			#name:FETCH_1#			
+
+## FetchLayer2 재설정 - 도로 차선 상단 
+# SRAM.Load 1 - FetchLayer.LayerProperty2 
+fncBegin		#name:FETCH_2#			
+w32	0x0004A888	0x6018A000		# BaseAddress2 - SRAM.Load 1 
+w32	0x0004A898	0x00040138		# SourceBufferAttributes2
+w32	0x0004A89C	0x00450270		# SourceBufferDimension2 
+w32	0x0004A8A0	0x08080808		# ColorComponentBits2
+w32	0x0004A8A4	0x10080000		# ColorComponentShift2
+w32	0x0004A8A8	0x01B80289		# LayerOffset2
+w32	0x0004A8B8	0x00000101		# LayerProperty2					
+w32	0x0004AC80	0xFF000000		# ColorPalette_ 
+w32	0x0004AC84	0xFF101010		# ColorPalette_
+w32	0x0004AC88	0xFF202020		# ColorPalette_
+w32	0x0004AC8C	0xFF343434		# ColorPalette_
+w32	0x0004AC90	0xFF444444		# ColorPalette_
+w32	0x0004AC94	0xFF545454		# ColorPalette_
+w32	0x0004AC98	0xFF6B6B6B		# ColorPalette_
+w32	0x0004AC9C	0xFF878787		# ColorPalette_
+w32	0x0004ACA0	0xFF9B9B9B		# ColorPalette_
+w32	0x0004ACA4	0xFFABABAB		# ColorPalette_
+w32	0x0004ACA8	0xFFBBBBBB		# ColorPalette_
+w32	0x0004ACAC	0xFFCBCBCB		# ColorPalette_
+w32	0x0004ACB0	0xFFDBDBDB		# ColorPalette_
+w32	0x0004ACB4	0xFFEFEFEF		# ColorPalette_
+w32	0x0004ACB8	0xFFFFFFFF		# ColorPalette_
+w32	0x0004ACBC	0xFFFFFFFF		# ColorPalette_
+fncEnd			#name:FETCH_2#			
+
+## FetchLayer3 재설정 - 도로 차선 중간 
+# SRAM.Load 2 - FetchLayer.LayerProperty3 
+fncBegin		#name:FETCH_3#			
+w32	0x0004A8C0	0x60190000		# BaseAddress3 - SRAM.Load 2 
+w32	0x0004A8D0	0x000400EC		# SourceBufferAttributes3 
+w32	0x0004A8D4	0x004401D9		# SourceBufferDimension3 
+w32	0x0004A8D8	0x08080808		# ColorComponentBits3 
+w32	0x0004A8DC	0x10080000		# ColorComponentShift2 
+w32	0x0004A8E0	0x014502DE		# LayerOffset3 
+w32	0x0004A8F0	0x00000101		# LayerProperty3		
+w32	0x0004ACC0	0xFF000000		# ColorPalette_ 
+w32	0x0004ACC4	0xFF101010		# ColorPalette_ 
+w32	0x0004ACC8	0xFF242424		# ColorPalette_ 
+w32	0x0004ACCC	0xFF343434		# ColorPalette_
+w32	0x0004ACD0	0xFF444444		# ColorPalette_
+w32	0x0004ACD4	0xFF545454		# ColorPalette_
+w32	0x0004ACD8	0xFF6D6D6D		# ColorPalette_
+w32	0x0004ACDC	0xFF878787		# ColorPalette_
+w32	0x0004ACE0	0xFF9B9B9B		# ColorPalette_
+w32	0x0004ACE4	0xFFABABAB		# ColorPalette_
+w32	0x0004ACE8	0xFFBBBBBB		# ColorPalette_
+w32	0x0004ACEC	0xFFCBCBCB		# ColorPalette_
+w32	0x0004ACF0	0xFFDFDFDF		# ColorPalette_ 
+w32	0x0004ACF4	0xFFEFEFEF		# ColorPalette_
+w32	0x0004ACF8	0xFFFFFFFF		# ColorPalette_
+w32	0x0004ACFC	0xFFFFFFFF		# ColorPalette_
+fncEnd			#name:FETCH_3#			
+
+## FetchLayer4 재설정 - 도로 차선 하단  
+# SRAM.Load 3 - FetchLayer.LayerProperty4 
+fncBegin		#name:FETCH_4#			
+w32	0x0004A8F8	0x60195000		# BaseAddress4 - SRAM.Load 3 
+w32	0x0004A908	0x000400A3		# SourceBufferAttributes4 
+w32	0x0004A90C	0x002E0147		# SourceBufferDimension4
+w32	0x0004A910	0x08080808		# ColorComponentBits4
+w32	0x0004A914	0x10080000		# ColorComponentShift4
+w32	0x0004A918	0x00E6032A		# LayerOffset4
+w32	0x0004A928	0x00000101		# LayerProperty4				
+w32	0x0004AD00	0xFF000000		# ColorPalette_ 
+w32	0x0004AD04	0xFF101010		# ColorPalette_
+w32	0x0004AD08	0xFF202020		# ColorPalette_
+w32	0x0004AD0C	0xFF343434		# ColorPalette_
+w32	0x0004AD10	0xFF4B4B4B		# ColorPalette_
+w32	0x0004AD14	0xFF646464		# ColorPalette_
+w32	0x0004AD18	0xFF787878		# ColorPalette_
+w32	0x0004AD1C	0xFF878787		# ColorPalette_
+w32	0x0004AD20	0xFF979797		# ColorPalette_
+w32	0x0004AD24	0xFFABABAB		# ColorPalette_
+w32	0x0004AD28	0xFFBBBBBB		# ColorPalette_
+w32	0x0004AD2C	0xFFCBCBCB		# ColorPalette_
+w32	0x0004AD30	0xFFDFDFDF		# ColorPalette_
+w32	0x0004AD34	0xFFEFEFEF		# ColorPalette_
+w32	0x0004AD38	0xFFFFFFFF		# ColorPalette_
+w32	0x0004AD3C	0xFFFFFFFF		# ColorPalette_
+fncEnd			#name:FETCH_4#			
+					
+## FetchLayer5 재설정 - 중앙 차 
+# SRAM.CAR - FetchLayer.LayerProperty5
+fncBegin		#name:FETCH_5#			
+w32	0x0004A930	0x60197000		# BaseAddress5 - SRAM.CAR 
+w32	0x0004A940	0x002002CF		# SourceBufferAttributes5 
+w32	0x0004A944	0x009F00B3		# SourceBufferDimension5
+w32	0x0004A948	0x08080808		# ColorComponentBits5
+w32	0x0004A94C	0x10080018		# ColorComponentShift5
+w32	0x0004A950	0x015E0370		# LayerOffset5
+w32	0x0004A960	0x00000100		# LayerProperty5
+fncEnd			#name:FETCH_5#			
+
+## FetchLayer6 재설정 - 방향등 문구 "D" 
+# SRAM.D_ - FetchLayer.LayerProperty6 
+fncBegin		#name:FETCH_6#			
+w32	0x0004A968	0x601B4000		# BaseAddress6 - SRAM.D_ 
+w32	0x0004A978	0x00040121		# SourceBufferAttributes6 
+w32	0x0004A97C	0x004A0242		# SourceBufferDimension6
+w32	0x0004A980	0x08080808		# ColorComponentBits6
+w32	0x0004A984	0x10080000		# ColorComponentShift6
+w32	0x0004A988	0x003002A2		# LayerOffset6
+w32	0x0004A998	0x00000101		# LayerProperty6
+w32	0x0004AD80	0xFF000000		
+w32	0x0004AD84	0xFF151515		
+w32	0x0004AD88	0xFF272727		
+w32	0x0004AD8C	0xFF373737		
+w32	0x0004AD90	0xFF434343		
+w32	0x0004AD94	0xFF565656		
+w32	0x0004AD98	0xFF626262		
+w32	0x0004AD9C	0xFF767676		
+w32	0x0004ADA0	0xFF8E8E8E		
+w32	0x0004ADA4	0xFFABABAB		
+w32	0x0004ADA8	0xFFB4B4B4		
+w32	0x0004ADAC	0xFFC8C8C8		
+w32	0x0004ADB0	0xFFDADADA		
+w32	0x0004ADB4	0xFFEAEAEA		
+w32	0x0004ADB8	0xFFFCFCFC		
+w32	0x0004ADBC	0xFFFFFFFF		
+fncEnd			#name:FETCH_6#			
+
+## FetchLayer7 재설정 - 
+# SRAM.  - FetchLayer.LayerProperty7 
+fncBegin		#name:FETCH_7#			
+w32	0x0004A9A0	0x601DE000		# BaseAddress7 - SRAM.6 #! Safety Mode 첫 진입이 속도계, RPM 등 첫 영상에 숫자. 그래서 쌩뚱맞게 6이 나오는 것. 
+w32	0x0004A9B0	0x002000EF		# SourceBufferAttributes7
+w32	0x0004A9B4	0x0059003B		# SourceBufferDimension7
+w32	0x0004A9B8	0x08080808		# ColorComponentBits7
+w32	0x0004A9BC	0x10080018		# ColorComponentShift7
+w32	0x0004A9C0	0x012C0122		# LayerOffset7
+w32	0x0004A9D0	0x00000100		# LayerProperty7
+fncEnd			#name:FETCH_7#			
+
+## FetchLayer8 재설정 - 
+# SRAM.4 - FetchLayer.LayerProperty8 
+fncBegin		#name:FETCH_8#			
+w32	0x0004A9D8	0x601D2000		# BaseAddress8 - SRAM.4 이미지 영역 #! Safety Mode 첫 진입이 속도계, RPM 등 첫 영상에 숫자. 그래서 쌩뚱맞게 4가 나오는 것. 
+w32	0x0004A9E8	0x002000EF		# 
+w32	0x0004A9EC	0x0059003B		# 
+w32	0x0004A9F0	0x08080808		# 
+w32	0x0004A9F4	0x10080018		# 
+w32	0x0004A9F8	0x012C0168		# 
+w32	0x0004AA08	0x00000100		# LayerProperty8 
+fncEnd			#name:FETCH_8#			
+
+## FetchLayer9 재설정 - 2
+# SRAM.2 - FetchLayer.LayerProperty9 
+fncBegin		#name:FETCH_9#			
+w32	0x0004AA10	0x601C6000		# BaseAddress9 - SRAM.2 이미지 영역 #! Safety Mode 첫 진입이 속도계, RPM 등 첫 영상에 숫자. 그래서 쌩뚱맞게 2가 나오는 것. 
+w32	0x0004AA20	0x002000EF		# 
+w32	0x0004AA24	0x0059003B		# 
+w32	0x0004AA28	0x08080808		# 
+w32	0x0004AA2C	0x10080018		# 
+w32	0x0004AA30	0x012C05DC		# 
+w32	0x0004AA40	0x00000100		# LayerProperty9 
+fncEnd			#name:FETCH_9#			
+					
+## FetchLayer10 재설정 - 
+# SRAM.3 - FetchLayer.LayerProperty10 
+fncBegin		#name:FETCH_10#			
+w32	0x0004AA48	0x601CC000		# BaseAddress10 - SRAM.3 이미지 영역 #! Safety Mode 첫 진입이 속도계, RPM 등 첫 영상에 숫자. 그래서 쌩뚱맞게 3이 나오는 것. 
+w32	0x0004AA58	0x002000EF		# 
+w32	0x0004AA5C	0x0059003B		# 
+w32	0x0004AA60	0x08080808		# 
+w32	0x0004AA64	0x10080018		# 
+w32	0x0004AA68	0x012C0622		# 
+w32	0x0004AA78	0x00000100		# 
+fncEnd			#name:FETCH_10#			
+
+## FetchLayer11 재설정 - km/h 
+# SRAM.km/h - FetchLayer.LayerProperty11
+fncBegin		#name:FETCH_11#			
+w32	0x0004AA80	0x601F6000		# BaseAddress11 - SRAM.km/h 이미지 영역 
+w32	0x0004AA90	0x0004003B		# 
+w32	0x0004AA94	0x00330077		# 
+w32	0x0004AA98	0x08080808		# 
+w32	0x0004AA9C	0x10100800		# 
+w32	0x0004AAA0	0x0190012C		# 
+w32	0x0004AAB0	0x00000101		# 
+w32	0x0004AEC0	0xFFFFFF00		# 
+w32	0x0004AEC4	0xFFFFFF18		# 
+w32	0x0004AEC8	0xFFFFFF28		# 
+w32	0x0004AECC	0xFFFFFF39		# 
+w32	0x0004AED0	0xFFFFFF46		# 
+w32	0x0004AED4	0xFFFFFF53		# 
+w32	0x0004AED8	0xFFFFFF6A		# 
+w32	0x0004AEDC	0xFFFFFF78		# 
+w32	0x0004AEE0	0xFFFFFF88		# 
+w32	0x0004AEE4	0xFFFFFF98		# 
+w32	0x0004AEE8	0xFFFFFFA7		# 
+w32	0x0004AEEC	0xFFFFFFBC		# 
+w32	0x0004AEF0	0xFFFFFFD3		# 
+w32	0x0004AEF4	0xFFFFFFE3		# 
+w32	0x0004AEF8	0xFFFFFFFE		# 
+w32	0x0004AEFC	0xFFFFFFFF		# 
+fncEnd			#name:FETCH_11#			
+
+## FetchLayer12 재설정 - x100 rpm 
+# SRAM.x100 rpm - FetchLayer.LayerProperty12
+fncBegin		#name:FETCH_12#			
+w32	0x0004AAB8	0x601F7000		# BaseAddress12 - SRAM.x100 rpm 이미지 영역 
+w32	0x0004AAC8	0x00040039		# 
+w32	0x0004AACC	0x001D0073		# 
+w32	0x0004AAD0	0x08080808		# 
+w32	0x0004AAD4	0x10100800		# 
+w32	0x0004AAD8	0x019005E1		# 
+w32	0x0004AAE8	0x00000101		# 
+w32	0x0004AF00	0xFFFFFF00		# 
+w32	0x0004AF04	0xFFFFFF18		# 
+w32	0x0004AF08	0xFFFFFF25		# 
+w32	0x0004AF0C	0xFFFFFF38		# 
+w32	0x0004AF10	0xFFFFFF4C		# 
+w32	0x0004AF14	0xFFFFFF6A		# 
+w32	0x0004AF18	0xFFFFFF75		# 
+w32	0x0004AF1C	0xFFFFFF8A		# 
+w32	0x0004AF20	0xFFFFFF97		# 
+w32	0x0004AF24	0xFFFFFFA8		# 
+w32	0x0004AF28	0xFFFFFFBC		# 
+w32	0x0004AF2C	0xFFFFFFC6		# 
+w32	0x0004AF30	0xFFFFFFD9		# 
+w32	0x0004AF34	0xFFFFFFE2		# 
+w32	0x0004AF38	0xFFFFFFFE		# 
+w32	0x0004AF3C	0xFFFFFFFF		# 
+fncEnd			#name:FETCH_12#			
+
+## FetchLayer13 재설정 - 좌측방향등
+# SRAM.Left - FetchLayer.LayerProperty13
+fncBegin		#name:FETCH_13#			
+w32	0x0004AAF0	0x60103000		# BaseAddress13 - SRAM.Left 이미지 영역 
+w32	0x0004AB00	0x0004001D		# 
+w32	0x0004AB04	0x003B003B		# 
+w32	0x0004AB08	0x08080808		# 
+w32	0x0004AB0C	0x18100800		# 
+w32	0x0004AB10	0x003202DA		# 
+w32	0x0004AB20	0x00000101		# 
+w32	0x0004AF40	0x00FF0000		# 
+w32	0x0004AF44	0x00FF0013		# 
+w32	0x0004AF48	0x00FF0026		# 
+w32	0x0004AF4C	0x00FF0038		# 
+w32	0x0004AF50	0x00FF0044		# 
+w32	0x0004AF54	0x00FF005A		# 
+w32	0x0004AF58	0x00FF0066		# 
+w32	0x0004AF5C	0x00FF0075		# 
+w32	0x0004AF60	0x00FF0087		# 
+w32	0x0004AF64	0x00FF0096		# 
+w32	0x0004AF68	0x00FF00B4		# 
+w32	0x0004AF6C	0x00FF00C2		# 
+w32	0x0004AF70	0x00FF00D9		# 
+w32	0x0004AF74	0x00FF00E3		# 
+w32	0x0004AF78	0x00FF00FE		# 
+w32	0x0004AF7C	0x00FF00FF		# 
+fncEnd			#name:FETCH_13#			
+
+## FetchLayer14 재설정 - 우측방향등
+# SRAM.Right - FetchLayer.LayerProperty14
+fncBegin		#name:FETCH_14#			
+w32	0x0004AB28	0x60104000		# BaseAddress14 - SRAM.Right 이미지 영역 
+w32	0x0004AB38	0x0004001D		# 
+w32	0x0004AB3C	0x003B003B		# 
+w32	0x0004AB40	0x08080808		# 
+w32	0x0004AB44	0x18100800		# 
+w32	0x0004AB48	0x0032046A		# 
+w32	0x0004AB58	0x00000101		# 			
+w32	0x0004AF80	0x00FF0000		# 
+w32	0x0004AF84	0x00FF0014		# 
+w32	0x0004AF88	0x00FF0033		# 
+w32	0x0004AF8C	0x00FF0047		# 
+w32	0x0004AF90	0x00FF005A		# 
+w32	0x0004AF94	0x00FF0067		# 
+w32	0x0004AF98	0x00FF0075		# 
+w32	0x0004AF9C	0x00FF0088		# 
+w32	0x0004AFA0	0x00FF0095		# 
+w32	0x0004AFA4	0x00FF00A0		# 
+w32	0x0004AFA8	0x00FF00B6		# 
+w32	0x0004AFAC	0x00FF00C3		# 
+w32	0x0004AFB0	0x00FF00DC		# 
+w32	0x0004AFB4	0x00FF00E4		# 
+w32	0x0004AFB8	0x00FF00FE		# 
+w32	0x0004AFBC	0x00FF00FF		# 
+fncEnd			#name:FETCH_14#			
+
+## FetchLayer15 재설정 - ESC (중앙 우측에 빨간색 차 Icon)
+# SRAM.ESC - FetchLayer.LayerProperty15
+fncBegin		#name:FETCH_15#			
+w32	0x0004AB60	0x6010D000		# BaseAddress15 - SRAM.ESC 이미지 영역 
+w32	0x0004AB70	0x00040018		# SourceBufferAttributes15
+w32	0x0004AB74	0x00310031		# SourceBufferDimension15
+w32	0x0004AB78	0x08080808		# ColorComponentBits15
+w32	0x0004AB7C	0x08101800		# ColorComponentShift15
+w32	0x0004AB80	0x00BE04BE		# 
+w32	0x0004AB90	0x00000101		# 
+w32	0x0004AFC0	0x0000FF00		# 
+w32	0x0004AFC4	0x0000FF19		# 
+w32	0x0004AFC8	0x0000FF26		# 
+w32	0x0004AFCC	0x0000FF37		# 
+w32	0x0004AFD0	0x0000FF46		# 
+w32	0x0004AFD4	0x0000FF5A		# 
+w32	0x0004AFD8	0x0000FF65		# 
+w32	0x0004AFDC	0x0000FF79		# 
+w32	0x0004AFE0	0x0000FF87		# 
+w32	0x0004AFE4	0x0000FF96		# 
+w32	0x0004AFE8	0x0000FFA6		# 
+w32	0x0004AFEC	0x0000FFB9		# 
+w32	0x0004AFF0	0x0000FFCA		# 
+w32	0x0004AFF4	0x0000FFE8		# 
+w32	0x0004AFF8	0x0000FFFE		# 
+w32	0x0004AFFC	0x0000FFFF		# 
+fncEnd			#name:FETCH_15#			
+
+i4end					

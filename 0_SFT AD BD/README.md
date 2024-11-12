@@ -24,19 +24,19 @@
 ## 참고 사항 
     - 개발의도 파악과 시인성, 가독성을 위해, Source Code를 볼 때는 Visual Studio Code를 추천한다. 
         - language는 Julia로 설정한다. 
+        - doc 폴더에 있는 settings.json을 적용한다. 
         - 각 주석 의미는 "주석 template.par"을 참고한다. 
 
 ## 버전 별 상세내역 
 <details>
-<summary>V0.0.0. (2024.11.12)</summary>  
+<summary>V0.0.0. (2024.10.)</summary>  
 
 >- 1차 릴리즈. 
 >- Bottom up 위주로 기능 자체 구현에만 중점을 둠. 
->- 모든 Component, Unit에 대해 검증 되지 않음. 
->- Component, Unit 간에 정리되지 않음. 또한, 전달, 반환 형식에 대해 통일 되지 않음. 
+>- bin은 없으며, 모든 Component, Unit에 대해 검증 되지 않음. 
+>- Component, Unit 간의 정리되지 않음. 또한, 전달, 반환 형식에 대해 통일 되지 않음. 
 >- 거의 대부분의 명령어 argu는 수정 필요. 
 >- SEERIS IP를 이용하는 Component과 Unit에 대해 진행 되지 않음.
 >- 예제 소스 등도 포함되어 있는 경우 있어서 정리 필요. 
 >- 설계서와의 nametag 등 매칭 필요. 
->- 설계 문서와 그나마 가장 근접한 건 현재 3가지 - SPI Read & Write, Memory CRC
 </details>

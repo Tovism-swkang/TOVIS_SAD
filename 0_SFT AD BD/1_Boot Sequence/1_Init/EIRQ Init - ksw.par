@@ -1,0 +1,53 @@
+# Indigo4L
+# SC1721
+
+#^
+    #^ 
+    #^ RLT 0 : EVENT 0 
+    #^ RLT 1 : EVENT 1 
+    #^ RLT 2 : EVENT 2 
+    #^ WDG, 각 Timer 주기 설정 필요 
+#^ 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## EIRQ INIT 
+
+
+#! GPIO 8 ~ 31 - Note: after MSIO configuration is finished (related register DISPx/CAPx.MSIO*), do not forget to release related SERRESET.dispX/capX_resx 
+#? 아래 두 라인은 GPIO INIT에서 수행. 
+#w32 0x00000850  0x00000005      # GC_PIN.GPIO20_CTL.EIRQ_4#    I2C_EIRQ - EIRQ_4 , 경고등 
+#w32 0x00000854  0x00000005      # GC_PIN.GPIO21_CTL.EIRQ_5#    SPI_EIRQ - EIRQ_5 , FW update 
+
+
+
+#! 아래 4라인은 Boot Seq 최하단, 거의 끝나갈 때 즈음 배치 해야 함. V0에서는 I2C_EIRQ만 적용. V2에서는 SPI_EIRQ까지 적용. 
+w32 0x000B000C  0x00000030      # EXT_IRQ.MODE0  
+w32 0x000B0010  0x00000000      # EXT_IRQ.MODE1  
+w32 0x000B0014  0x00000030      # EXT_IRQ.LEVEL 
+w32 0x000B001C  0x00000030      # EXT_IRQ.FILTER : Noise filter enable 
+# Mode0[n] 1, Mode1[n] 0, Level[n] 1,    = High Level, 즉 Pin Input High일 때 EXT_IRQ.Status[n] = 1  
+# 위 세팅이면, 한번이라도 High가 되면 Interrupt가 뛰고 EXT_IRQ.Status[n]과 GC_INT.EIRQ_STS[n] 모두 1가 됨. clear하기 전까지 1 유지. 
+
+
+#? 아래는 실 사용 예제.(EXT_IRQ.STATUS or GC_INT.EIRQ_STS 사용). V2에서, FW update를 위해서 제어기가 SPI_EIRQ에 High를 입력했다면? 
+r32 0x000B0000              # DREG0 = EXT_IRQ.STATUS 
+i4drcheck   0x00000020      # SPI_EIRQ 
+    jmpnamed    always  0   #name:SPI_EIRQ_PIN_LOW#     
+    jmpnamed    always  0   #name:SPI_EIRQ_PIN_HIGH# SPI_EIRQ pin = High 
+
+lblnamed                    #name:SPI_EIRQ_PIN_LOW# 
+
+# 코드 
+
+lblnamed                    #name:SPI_EIRQ_PIN_HIGH# 
+# 코드 
+
+

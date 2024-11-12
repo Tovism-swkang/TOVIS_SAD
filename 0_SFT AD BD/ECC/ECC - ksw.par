@@ -1,0 +1,77 @@
+# Indigo4L
+# SC1721
+
+#^ 2024.11.12 
+
+#^ Event 0에 할당 
+#? SRAM과 Internal Flash 모두 별도 Interrupt에는 등록 하지 않고, IRQ 상태만 확인하는 용도로 사용.  
+#? SRAM에는 실질적으로 중요한 data가 적고, 실제 code 및 image는 VRAM에 있어서 VRAM ECC도 필요함. 다만, SRAM, Flash와는 달리 복잡하여 SN의 기술지원으로 V2에서 진행했으면 함. 
+
+#? SRAM_ECC, FLASH_ECC 주소 지정할 것.
+
+#? Indigo3 - D社 구조  
+    # Event1 
+    #i4drget 32 0x0002D024   # Flash CFG - IRQ_STAT 확인 
+    # [9] ecc_mbiterr RW1C 0x0 ECC multi-bit error detected
+    # [8] ecc_sbiterr RW1C 0x0 ECC single bit error detected
+    # single bit는 안 함. multi bit만 함. 
+    #i4drand 0x00000200
+    #i4drload 0x00000200
+    #이후 RAM 변수에 에러 여부 저장하고 처리 
+#
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## ECC IRQ check 
+
+## Flash ECC IRQ check 
+i4drget 32  0x0002D028  # FLASH_CFG_CMDSEQ.IRQ_STAT
+#$  IRQ_STAT - Fields in this register are set independent from IRQ_EN, means even with disabled IRQ_EN the status fields are updated. 
+    #$ [6] ecc_mbiterr_int RW1C 0x0 ECC multi-bit error detected
+    #$ [5] ecc_sbiterr_int RW1C 0x0 ECC single bit error detected
+    #$ [4] ecc_dbiterr_int RW1C 0x0 ECC single data bit error correction detected
+#$ 
+i4drand     0x00000040  # [6] ecc_mbiterr_int 
+i4drcheck   0x00000040  
+    jmpnamed    always  0   #name:FLASH_ECC_OK# 
+    jmpnamed    always  0   #name:FLASH_ECC_NG# 
+
+## Flash ECC - OK 
+lblnamed                    #name:FLASH_ECC_OK#     
+w32 0x00000000  0x00001111  # FLASH_ECC 
+jmpnamed    always  0       #name:SRAM_ECC_STEP# 
+
+## Flash ECC - NG 
+lblnamed                    #name:FLASH_ECC_NG# 
+w32 0x00000000  0x0000FFFF  # FLASH_ECC 
+#? Interrupt Clear??? Clear reg가 없음?!?!?!?!?  
+jmpnamed    always  0       #name:SRAM_ECC_STEP# 
+
+## SRAM ECC IRQ check 
+lblnamed                    #name:SRAM_ECC_STEP# 
+i4drget 32  0x00000CA4  # GC_INT.DIVERS_ERRORS_STS
+#$  DIVERS_ERRORS_STS - Interrupt status for DIVERS_ERRORS interrupts group
+    #$ [1] SRAM_E2_STS R 0x0 Status for SRAM_E2 interrupt (Common SRAM ECC Error 2 (two or more bit errors detected))
+    #$ [0] SRAM_E1_STS R 0x0 Status for SRAM_E1 interrupt (Common SRAM: ECC Error 1 (single bit error corrected))
+#$
+i4drand     0x00000003      #
+jmpnamed    zero    0       #name:SRAM_ECC_OK# 
+
+## SRAM ECC - NG 
+w32 0x00000000  0x0000FFFF  # SRAM_ECC 
+w32 0x00000C9C  0xFFFFFFFF  # GC_INT.DIVERS_ERRORS_CLR  #? Interrupt Clear??? 
+jmpnamed    always  0       #name:ECC_END# 
+
+## SRAM ECC - OK 
+lblnamed                    #name:SRAM_ECC_OK# 
+w32 0x00000000  0x00001111  # SRAM_ECC 
+
+lblnamed                    #name:ECC_END# 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+##
