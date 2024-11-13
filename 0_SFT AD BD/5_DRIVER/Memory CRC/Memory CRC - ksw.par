@@ -4,8 +4,9 @@
 #^ 2024.11.11 
 
 #^ Component ID : SAD_DRI_203 
-#^ Internal Flash Address : 
-#^ RAM : 
+#^ Internal Flash Address : 미정 
+#^ RAM : 미정 
+#^ Size : 0x234 (564 Bytes)
 #^ 전달 인자(GPreg)를 받을 RAM 주소 : 
 #^ 반환 인자(GPreg)에 전달할 RAM 주소 : 
 
@@ -205,7 +206,7 @@ jmpnamed    always  0       #name:CRC_CALCULATION_MAIN_END#
 ## CRC RESULT COMPARE FAILED 
 #? CRC 위치에 따라, Fault 변수 설정해줘야 함. 
 lblnamed                        #name:CRC_RESULT_COMPARE_FAILED#
-w32 0x60000914  0xFFFFFFFF      # CRC_Success_Status = CRC Compare Fail 
+w32 0x60000914  0x0000FFFF      # CRC_Success_Status = CRC Compare Fail 
 
 i4drrestore 3                   # DREG0 = Buffer[3], CRC_Data_Location     
 i4drcheck   0x11111111          # NM Image 

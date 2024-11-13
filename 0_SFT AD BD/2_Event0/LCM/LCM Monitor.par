@@ -1,0 +1,49 @@
+# Indigo4L
+# SC1721
+	
+
+#^ 2024.11.13
+
+#^ Component ID : SAD_APPL_106 
+#^ Internal Flash Address : 
+#^ RAM : 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 :  
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_106 LCM_Mon 
+## Unit - LCM_Chk 
+#@ caller - "SAD_RTC_302 Event0"
+
+fncBegin		#name:LCM_Mon# 
+
+#% COMP 전달인자 (caller "SAD_RTC_302 Event0")
+#% 없음 
+
+## LCD Monitor 
+i4call			# LCD Monitor 	#? 주소 미정 
+
+#% COMP 반환인자 
+r32	0x0004027C	# GPreg[31], LCD_FAIL_PIN_Status 
+i4drput	32	0x00040200	# GPreg[0] = LCD_FAIL_PIN_Status 
+
+## LED Monitor 
+i4call			# LED Monitor	#? 주소 미정 
+
+#% COMP 반환인자 
+r32	0x0004027C	# GPreg[31], LED_FAIL_PIN_Status 
+i4drput	32	0x00040204	# GPreg[1] = LED_FAIL_PIN_Status 
+
+## Status Save 
+#% COMP 전달인자 
+#% 일부는 위에서 수행 
+#? Status Save 설계 다 되면 이 부분 추가 할 것. 
+i4call			# Status Save 	#? 주소 미정 
+
+#% COMP 반환인자 
+#% 없음 
+
+fncEnd			#name:LCM_Mon# 

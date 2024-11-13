@@ -2,11 +2,12 @@
 # SC1721
 
 
-#^ 2024.11.10 
+#^ 2024.11.13 
 
 #^ Component ID : SAD_DRI_201 
-#^ Internal Flash Address : 
-#^ RAM : 0x60140500 
+#^ Internal Flash Address : 미정
+#^ RAM : 0x60141000 
+#^ Size : 0x728 (1,832 Bytes)
 #^ 전달 인자(GPreg)를 받을 RAM 주소 : 0x60140004, 0x60140008, 0x6014000C 
 #^ 반환 인자(GPreg)에 전달할 RAM 주소 : 0x60140020 
 
@@ -33,17 +34,20 @@
     #$ Write C          0x60140020      GPreg[31]   0x0004020C 
 
     #$ Local Vari - Internal Flash 
-    #$ Data_Size_W      0x60140512      
-    #$ DST_Address_W    0x60140514      
-    #$ SRC_Address_W    0x60140518      
-    #$ Sector_E         0x60140552      
+    #$ Data_Size_W      0x60141012      
+    #$ DST_Address_W    0x60141014      
+    #$ SRC_Address_W    0x60141018      
+    #$ Sector_E         0x60141052      
 #$
 
 ###################################################################################################################
 ###################################################################################################################
 ###################################################################################################################
+## Comp - SAD_DRI_201 SPI_Fsh_Wr (SPI_Flash_Write)
 
-## Internal Flash - Sector Write    @ Unit - RAM_to_IntFlash 
+
+
+## Internal Flash - Sector Write    @ Unit - RAM_to_InFsh 
 #@ caller - RAM_to_IntFlash 
 #! i4flashprog의 argu overwriting으로 인해 위치 상 앞으로 이동. 
 fncBegin			        #name:INTERNAL_WRITE#		
@@ -62,7 +66,7 @@ i4drcheck	0x00000001		# IF
 fncEnd			            #name:INTERNAL_WRITE#		 IF DREG0 == 0x00000001, RET 
 
 
-## Internal Flash - Sector Erase    @ Unit - RAM_to_IntFlash 
+## Internal Flash - Sector Erase    @ Unit - RAM_to_InFsh 
 #@ caller - RAM_to_IntFlash 
 #! i4flasherase의 argu overwriting으로 인해 위치 상 앞으로 이동. 
 fncBegin                    #name:INTERNAL_SECTOR_ERASE# 
@@ -90,7 +94,8 @@ fncEnd                      #name:INTERNAL_SECTOR_ERASE#  IF DREG0 == 0x00000001
 ###################################################################################################################
 ###################################################################################################################
 ###################################################################################################################
-## 1 Unit - SPI_Write_Location 
+## Comp - SAD_DRI_201 SPI_Fsh_Wr (SPI_Flash_Write)
+## Unit - SPI_Write_Location 
 #@ caller - other COMPs 
 
 lblnamed        #name:SPI_Write_Location#   
@@ -204,7 +209,8 @@ i4return
 ###################################################################################################################
 ###################################################################################################################
 ###################################################################################################################
-## 2 Unit - Internal Flash Write, RAM_to_IntFlash 
+## Comp - SAD_DRI_201 SPI_Fsh_Wr (SPI_Flash_Write)
+## Unit - RAM_to_In_Fsh 
 #@ caller - SPI_Write_Location 
 
 #% UNIT 전달인자 
@@ -235,7 +241,7 @@ i4drsave	4				# Buffer[4] = DREG0                                 #? 0 -> 4
 #@ loop start - Sector_Erase_Loop 
 lblnamed			        #name:Sector_Erase_LOOP#		
 i4drrestore	4				# DREG1 = DREG0, DREG0 = Buffer[4]
-i4drput	16	0x60140552		# 0x60140386 = DREG0, Sector E
+i4drput	16	0x60141052		# 0x60140386 = DREG0, Sector E
 
 fncCall			            #name:INTERNAL_SECTOR_ERASE#		
 
@@ -258,11 +264,11 @@ jmpnamed	notzero	0	    #name:LOOP_D#        IF DREG0 != 0, JUMP LOOP_D
 ## Data Size <= 4KB  
 i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
 i4drshiftr	3				# DREG0 >>= 3 
-i4drput	16	0x60140512		# Data Size W = (16)DREG0 
+i4drput	16	0x60141012		# Data Size W = (16)DREG0 
 i4drrestore 0               # DREG1 = DREG0, DREG0 = Buffer[0], DST Address 
-i4drput	32	0x60140514		# DST Address W = DREG0 	
+i4drput	32	0x60141014		# DST Address W = DREG0 	
 i4drrestore 2               # DREG1 = DREG0, DREG0 = Buffer[2], SRC Address 
-i4drput	32	0x60140518		# SRC Address W = DREG0 	
+i4drput	32	0x60141018		# SRC Address W = DREG0 	
 
 fncCall			            #name:INTERNAL_WRITE#		
 
@@ -272,14 +278,14 @@ jmpnamed	always	0	    #name:END#
 
 #@ loop start - LOOP_D 
 lblnamed			        #name:LOOP_D#		
-i4write	16	0x60140512	0x00000200  # size, addr, data - "0200" write   만약 data가 0xFF00FF00인데 16 size로 할 경우? 	0x0000FF00  
+i4write	16	0x60141012	0x00000200  # size, addr, data - "0200" write   만약 data가 0xFF00FF00인데 16 size로 할 경우? 	0x0000FF00  
 
 i4drrestore	0               # DREG1 = DREG0, DREG0 = Buffer[0]
-i4drput	32	0x60140514      # DST Address W = DREG0 
+i4drput	32	0x60141014      # DST Address W = DREG0 
 i4dradd		0x00001000		# DREG0 += 0x00001000	
 i4drsave	0				# Buffer[0] = DREG0                   
 i4drrestore	2				# DREG1 = DREG0, DREG0 = Buffer[2] 
-i4drput	32	0x60140518		# SRC Address W = DREG0
+i4drput	32	0x60141018		# SRC Address W = DREG0
 i4dradd		0x00001000		# DREG0 += 0x00001000	
 i4drsave	2				# Buffer[2] = DREG0                
 
@@ -296,11 +302,11 @@ jmpnamed	notzero	0	    #name:LOOP_D#        IF DREG0 != 0, JUMP LOOP_D
 i4drrestore 1               # DREG1 = DREG0, DREG0 = Buffer[1], Data Size 
 i4drand		0x00000FFF      # DREG0 &= 0xFFF 
 i4drshiftr	3				# DREG0 >>= 3
-i4drput	16	0x60140512		# Data Size W = (16)DREG0 	
+i4drput	16	0x60141012		# Data Size W = (16)DREG0 	
 i4drrestore	0				# DREG1 = DREG0, DREG0 = Buffer[0]      
-i4drput	32	0x60140514		# DST Address W = DREG0 	
+i4drput	32	0x60141014		# DST Address W = DREG0 	
 i4drrestore	2				# DREG1 = DREG0, DREG0 = Buffer[2]      
-i4drput	32	0x60140518		# SRC Address W = DREG0 
+i4drput	32	0x60141018		# SRC Address W = DREG0 
 
 fncCall			#name:INTERNAL_WRITE#		
 
@@ -328,7 +334,8 @@ fncEnd			        #name:Internal_Flash_Write#
 ###################################################################################################################
 ###################################################################################################################
 ###################################################################################################################
-## 3 Unit - External Flash Write, RAM_to_ExtFlash
+## Comp - SAD_DRI_201 SPI_Fsh_Wr (SPI_Flash_Write)
+## Unit - RAM_to_Ex_Fsh 
 #@ caller - SPI_Write_Location 
 
 #% UNIT 전달인자 

@@ -1,0 +1,103 @@
+# Indigo4L
+# SC1721
+	
+#^ 2024.11.13
+
+#^ Component ID : SAD_DRI_207 
+#^ Internal Flash Address : 
+#^ RAM : 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 : 없음 
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 0x60001FFC
+
+#$ 
+    #$ Input 
+	#$ 없음 
+
+    #$ Output 
+    #$ Current_Fault_Result   0x60001FFC      GPreg[31]   0x0004020C 
+#$
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_DRI_207 Flt_Hex2Bit 
+## Unit - Hex2Bit_Conv 
+
+#@ caller - "SAD_APPL_109 FLT_Handler" 
+
+#! Fault log 관련 변수는 메모리 주소를 한 곳에 위치시켜야 함. 
+#? 각(총 ??개) Fault 변수에 대해, bit 단위로 변환하여, 모든 Fault에 대해 총 32bits (4Bytes, 1Word)로 변환. 
+#? ADC - Over Voltage와 Under Voltage에 대해 변수 하나로 Fault 기록하면 안 됨. OV, UV 각각 따로 해야 아래 동작 가능. 
+
+fncBegin                    #name:Flt_Hex2Bit# 
+
+#% COMP 전달인자 (caller "FLT_Handler")
+#% 없음 
+
+## Faults Collection
+#? 변수 주소 확정하고 argu 수정할 것.  
+r32 
+i4drput 32  0x60000F00      # Fault0 - 0번 bit 
+r32
+i4drput 32  0x60000F04      # Fault1 
+r32
+i4drput 32  0x60000F08      # Fault2 
+....
+r32
+i4drput 32  ??              # Faultn - n번 bit  
+
+## Vari clean up 
+w32 0x60001FFC  0x00000000  # Current_Fault_Result 
+
+## Buffer Init. 
+i4bufclr    0               # Buffer[0] : src addr 
+i4bufclr    1               # Buffer[1] : bit number, loop 한번 돌 때마다 좌측으로 bit shift 한번. 
+i4bufinc    1               # Buffer[1] = 0..01b Init. 
+
+i4drload    0x60000F00      # DREG1 = DREG0, DREG0 = 0x60000F00, Fault 변수 중 주소 가장 첫 번째. 
+i4drsave    0               # Buffer[0] = src addr 
+i4peek      32              # DREG0 = *DREG0 
+
+#@ loop start - Hex2Bit 
+lblnamed                    #name:HEX2BIT_CALC_LOOP# 
+
+## Fault occurence check 
+i4drcheck   0x0000FFFF      
+    jmpnamed    always  0   #name:HEX2BIT_NOT_ADD#  if 0x0~0, Not add 
+    jmpnamed    always  0   #name:HeX2BIT_ADD#      if 0x0~F, add 
+
+## Fault bit set 
+lblnamed    #name:HEX2BIT_ADD# 
+i4drrestore     1                   # DREG1 = DREG0, DREG0 = Buffer[1] 
+i4drget 0x60001FFC                  # DREG1 = Buffer[1], DREG0 = Current_Fault_Result
+i4dr1add0                           # DREG0+=DREG1 
+i4drput 32  0x60001FFC              # Current_Fault_Result = DREG0    
+
+## Fault bit unset and shift 
+lblnamed    #name:HEX2BIT_NOT_ADD# 
+i4drrestore     1   # DREG1 = DREG0, DREG0 = Buffer[1] 
+i4drshiftl      1   # DREG0 <<= 1 
+i4drsave        1   # Buffer[1] = DREG0 
+
+## Fault addr inc 
+i4drrestore 0       # DREG1 = DREG0, DREG0 = Buffer[0] 
+i4inc4 
+i4drsave    0       # Buffer[0] = DREG0 
+i4peek      32      # DREG0 = *DREG0 
+
+## loop check 
+i4bufcheck  1   0x80000000  # if Buffer[1] == 0x80000000, 
+#? 0x8~0으로 하든가, 아니면 overflow 됐을 때로 보고 0x0~0으로 하든가. 둘 중 하나. 어차피 Fault는 32개 안 넘을 듯. 
+#? SYS 문서에서 Fault 개수 확정 되어야 함. 
+	jmpnaed	always	0	#name:HEX2BIT_CALC_LOOP# 
+    #@ loop end 
+	jmpnaed	always	0	#name:HEX2BIT_CALC_END# 
+
+lblnamed                #name:HEX2BIT_CALC_END# 
+
+#% COMP 반환인자 
+r32 0x60001FFC              # 
+i4drput	32	0x0004027C 		# GPreg[31] = Current_Fault_Result
+
+fncEnd                      #name:Flt_Hex2Bit# 
+

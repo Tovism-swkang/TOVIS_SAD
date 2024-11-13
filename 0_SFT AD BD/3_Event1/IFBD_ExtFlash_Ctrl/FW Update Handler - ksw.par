@@ -1,0 +1,120 @@
+# Indigo4L
+# SC1721
+
+
+
+#^ Event1에서 수행, 1-Host의 Access Check, 2-Ext Flash 접근 권한 부여, 3-상태 저장 
+#^ HOST와의 sequence sync는 변수로만 진행. 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+##
+##  
+
+#@ caller - "SAD_RTC_303 Event1" 
+
+fncBegin					#name:Appr_Ctrl# 
+
+## FW Update Request check  @ Int Flash (Sector47) 
+
+w32		0x00026000	0x00000013		# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+
+i4copy  0x60000400  0x617C9000  4 # Addr, Src, Cnt - Src에서 Cnt만큼의 bytes 수를 Addr로 복사, Addr = RAM, Src = Int Flash #? Argu 변경 필요. 
+
+r32 FW_Request              # FW_Request - 제어기가 Ext Flash에 접근하길 원하는가? 
+i4drcheck   0x0000FFFF      # 
+    jmpnamed    always  0   #name:EXIT_FW_HANDLER# 	Host No Request 
+    jmpnamed    always  0   #name:HOST_REQUEST# 	Host Request 
+
+## Host Request 
+lblnamed                    #name:HOST_REQUEST#     
+
+w32 0x600025FC	0x0000FFFF  # ExtFlash_Switch_Status = (Host&ExtFlash) 
+
+
+fncCall						#name:SPI_SWT# 
+
+r32 FW_Update_Completed
+i4drcheck   0x0000FFFF
+    jmpnamed    always  0   #name:EXIT_FW_HANDLER#  Host Writing... Do Nothing. 
+    jmpnamed    always  0   #name:WRITING_COMPLETED#    Writing Completed. 
+
+lblnamed                    #name:WRITING_COMPLETED# 
+w32 0x600025FC  0x00001111  # ExtFlash_Switch_Status = (Indigo&ExtFlash)
+
+
+fncCall						#name:SPI_SWT# 
+
+
+
+#@ Comp Call 
+i4call  STATUS_SAVE         # 
+
+
+## NO Request 
+lblnamed                    #name:EXIT_FW_HANDLER# 
+
+fncEnd						#name:Appr_Ctrl# 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_103 IFBd_ExFsh_Ctrl (Interface Board - External Flash Control)
+## Unit - SPI_SWT (SPI Switch IC)
+
+#% UNIT 전달인자
+#% Buffer[0]	
+
+fncBegin					#name:SPI_SWT# 
+
+i4drrestore	0						# Switch IC 
+i4drcheck  0x00000000              
+    wf32    0x000A8000  21  1   1   # POSR0 Low : if (Vari == 0x0000FFFF), Host <-> Ext Flash 
+    wf32    0x000A8008  21  1   1   # POCR0 Low : if (Vari == 0x00001111), Indigo <-> Ext Flash 
+
+#% UNIT 반환인자 - 없음
+
+fncEnd						#name:SPI_SWT# 
+
+
+
+
+
+
+
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+#! V2용 Code , V0에서는 신경 안 써도 됨. 
+
+	#	#$ SCH net name : SPI_EIRQ[GPIO21] (idle - Low, FW - High)
+	#	#@ Event1 
+	#	#^ 1. SPI_EIRQ check, 2. SPI Switch IC control (Open or Close), 3. Status Save 
+	#
+	#	fncBegin                            #name:FW_UPDATE_REQUEST_HANDLER# 
+	#	## SPI_EIRQ pin check 
+	#	#? 해당 pin은 EIRQ이므로 관련된 사항 처리할 것. 
+	#	rf32	0x000A8300	21 1	#path:INDIGO4L.GPIO.PIDR0 LOW#
+	#	i4drcheck	1		        # IF 
+	#		jmpnamed always 0 		#name:# 제어기 접근 요청 X 
+	#		jmpnamed always 0 		#name:# 제어기 접근 요청 O 
+	#
+	#	w32 ExtFlash_Switch_Status  0xFFFFFFFF  # Host <-> Ext Flash 
+	#	w32 ExtFlash_Switch_Status  0x00000000  # Indigo <-> Ext Flash 
+	#
+	#	## SPI Switch IC Control 
+	#	i4call Ext_Flash_Control    # SPI Switch IC 
+	#
+	#	## Status Save 
+	#	i4call  STATUS_SAVE         # 
+	#
+	#	## NO Request 
+	#	i4return
+#

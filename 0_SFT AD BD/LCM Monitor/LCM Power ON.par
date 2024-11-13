@@ -1,0 +1,90 @@
+# Indigo4L
+# SC1721
+	
+
+#^ 2024.11.13
+
+#^ Component ID : SAD_APPL_108 
+#^ Internal Flash Address : 
+#^ RAM : 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 :  
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 
+
+#? argu 수정 필요. 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 1 Unit - LCM_Fail_Check
+#@ caller - "SAD_RTC_301 Boot_SEQ"
+
+fncBegin	#name:LCM_Fail_Check# 
+
+i4bufclr	0 
+i4bufclr	1 
+
+
+## LCD Monitor 
+i4call	0x00000000	# LCD Monitor	#? 주소 미정 
+r32	0x0004027C		# GPreg[31], LCD_FAIL_PIN_Status 
+i4drsave	0		# Buffer[0] = LCD_FAIL_PIN_Status 
+
+## LED Monitor 
+i4call	0x00000000	# LED Monitor	#? 주소 미정 
+r32	0x0004027C		# GPreg[31], LED_FAIL_PIN_Status 
+i4drsave	1 		# Buffer[1] = LED_FAIL_PIN_Status 
+
+#% UNIT 전달인자 - Buffer[0,1]
+fncCall		#name:LCD_POWER_ON# 
+
+
+fncEnd		#name:LCM_Fail_Check# 
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## 2 Unit - LCD_POWER_ON 
+#@ caller - LCM_Fail_Check
+
+#! LCD_RL, LCD_On/Off 2개 Pin은 Pull up으로 처리 필요. LCD 3.3V 인가 동시에 High가 되어야 하는데, Indigo4 booting 이후 시간 소요 상 동시 High 불가능. 
+
+#% UNIT 전달인자
+#% Buffer[0]	LCD_FAIL_PIN_Status		0x60002308
+#% Buffer[1]	LED_FAIL_PIN_Status		0x6000230C 
+
+fncBegin		#name:LCD_POWER_ON# 
+
+## LCD check 
+lblnamed		#name:LCD_CHECK# 
+i4bufcheck	0	0x0000FFFF	
+	jmpnamed	always	0	#name:LED_CHECK# 
+	jmpnamed	always	0	#name:LCM_POWER_ON_FAIL#  
+
+## LED check 	
+lblnamed		#name:LED_CHECK# 
+i4bufcheck	1	0x0000FFFF
+	jmpnamed	always	0	#name:LCM_POWER_ON_SUCCESS#  
+	jmpnamed	always	0	#nmae:LCM_POWER_ON_FAIL#  
+
+## LCM Power ON 
+lblnamed		#name:LCM_POWER_ON_SUCCESS# 
+## 1. LCD_RST PIN - High 
+wf32	0x000A8004	17 1 1	# GPIO.POSR0_HIGH : LCD_RST(GPIO49)	Output High 
+d	1000 	# 1ms delay 
+
+## 2. TOUCH_RST PIN - High 
+wf32	0x000A8004	11 1 1	# GPIO.POSR0_HIGH : TOUCH_RST(GPIO43) Output High 
+
+## 3. PON PIN - High 
+d	5000	# 5ms delay 		
+d	5000	# 5ms delay 		
+d	6000	# 6ms delay = 16ms delay
+wf32	0x000A8004	20 1 1	# GPIO.POSR0_HIGH : PON(GPIO52)	Output High 
+
+
+## LCM FAIL 
+lblnamed		#name:LCM_POWER_ON_FAIL# 
+
+fncEnd			#name:LCD_POWER_ON# 
