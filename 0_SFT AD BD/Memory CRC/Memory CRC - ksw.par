@@ -126,18 +126,18 @@ fncBegin            #name:CRC_EXECUTE#
 
 # Load value counter into buffer 2
 i4drrestore 2       # DREG1 = DREG0, DREG0 = Buffer[2], CRC_Calc_Length 
-i4drsave 5          # value counter #? 0번 버퍼, value counter 
+i4drsave 5          # value counter 
 
 # Load start address into buffer 1
 i4drrestore 1       # DREG1 = DREG0, DREG0 = Buffer[1], CRC_SrcAddress  
-i4drsave 6          # current value address #? 1번 버퍼, current value address 
+i4drsave 6          # current value address 
 
 #@ outer loop start - CRC Calculation 
 # CRC calculation main loop
 # Step through all 16 words in the array and add them to the CRC write register PRGCRC.CRCWR
 lblnamed                #name:CRC_CALCULATION_LOOP#
 
-i4bufcheck  5   0       # Check if value counter is zero ...    #? 0번 버퍼, value counter  
+i4bufcheck  5   0       # Check if value counter is zero ...    
     # ... if not zero, we need to start/continue processing
     jmpnamed    always  0       #name:CRC_CALCULATION_PROCESSING#      
     # ... if zero, we are finished and can leave the processing
@@ -145,22 +145,22 @@ i4bufcheck  5   0       # Check if value counter is zero ...    #? 0번 버퍼, 
 
 ## CRC PROCESSING - START / CONTINUE 
 lblnamed                #name:CRC_CALCULATION_PROCESSING#
-i4bufdec    5           # Immediately decrese value counter in buffer 5     #? 0번 버퍼, value counter  
+i4bufdec    5           # Immediately decrese value counter in buffer 5     
 
 ## CALCULATION - START 
 # Set/Reset a timeout counter to prevent hang ups while waiting for CRC unit ready signaling
 i4drload    0x04        # timeout counter value         #? 0x04가 적합한지 확인 필요. 
-i4drsave    7           # timeout counter               #? 2번 버퍼, timeout counter  
+i4drsave    7           # timeout counter              
 
     #@ inner loop start - CRC UNIT READY CHECK
     lblnamed                    #name:CRC_UNIT_READY_CHECK_LOOP#
-    i4bufcheck  7   0           # Check if CRC unit ready timeout counter is zero ...   #? 2번 버퍼, timeout counter  
+    i4bufcheck  7   0           # Check if CRC unit ready timeout counter is zero ...   
         jmpnamed    always  0   #name:CRC_UNIT_READY_CHECK#     we can start checking the CRC unit for being ready
         jmpnamed    always  0   #name:CRC_UNIT_READY_FAILED#    the crc unit was not accessable several times and we leave with an error
 
     ## CRC unit ready processing
     lblnamed                    #name:CRC_UNIT_READY_CHECK#
-    i4bufdec    7               # Immediately decrese timeout counter in buffer 7   #? 2번 버퍼, timeout counter 
+    i4bufdec    7               # Immediately decrese timeout counter in buffer 7   
     # HERE WE CHECK IF THE CRC UNIT IS READY AND CAN BE ACCESSED
     rf32    0x0002700C  28  1   # PRGCRC.CRCCFG.LOCK
     i4drcheck 0x00000000        # Check if CRC unit is ready ...
@@ -175,16 +175,16 @@ i4drsave    7           # timeout counter               #? 2번 버퍼, timeout 
 
 ## CRC UNIT READY 
 lblnamed                    #name:CRC_UNIT_READY#   CRC unit is ready
-i4drrestore 6               # Get address stored in buffer 6        #? 1번 버퍼, current value address 
+i4drrestore 6               # Get address stored in buffer 6        
 i4arload                    # Load address from data register into adress register
 i4argetindirect 32          # Get data from adress in adress register
 ## NOW THE VALUE IS AVAILABLE IN THE DATA REGISTER AND CAN BE ADDED TO THE CRC UNIT ... PRGCRC.CRCWR
 i4drput 32 0x00027010       # PRGCRC.CRCWR
 ## CALCULATION - END 
 
-i4drrestore 6               # Get current value address      #? 1번 버퍼, current value address 
+i4drrestore 6               # Get current value address     
 i4inc4                      # Increase current value address
-i4drsave 6                  # Store current value address back to buffer 6  #? 1번 버퍼, current value address 
+i4drsave 6                  # Store current value address back to buffer 6 
 jmpnamed    always  0       #name:CRC_CALCULATION_LOOP#     Finally jump back to the main calculation routine
 #@ outer loop end - CRC Calculation 
 
@@ -199,7 +199,7 @@ jmpnamed    ==  0               #name:CRC_CHECK_SUCCESS#            If they are 
 
 ## CRC LOCATION FAILED 
 lblnamed                    #name:CRC_LOCATION_FAILED#
-w32 0x60000914  0x22222222  # CRC_Success_Status = CRC Location Fail 
+w32 0x60000914  0x33333333  # CRC_Success_Status = CRC Location Fail 
 jmpnamed    always  0       #name:CRC_CALCULATION_MAIN_END# 
 
 ## CRC RESULT COMPARE FAILED 
@@ -210,17 +210,17 @@ w32 0x60000914  0xFFFFFFFF      # CRC_Success_Status = CRC Compare Fail
 i4drrestore 3                   # DREG0 = Buffer[3], CRC_Data_Location     
 i4drcheck   0x11111111          # NM Image 
     jmpnamed    always  0       #name:RESULT_CRC_2ND_LOCATION# 
-    w32 0x6000091C  0xFFFFFFFF  # IMAGE_DATA_CRC_Error
+    w32 0x6000091C  0x0000FFFF  # IMAGE_DATA_CRC_Error
 
 lblnamed                        #name:RESULT_CRC_2ND_LOCATION#      
 i4drcheck   0x22222222          # SM Image 
     jmpnamed always 0           #name:RESULT_CRC_3RD_LOCATION# 
-    w32 0x6000091C  0xFFFFFFFF  # IMAGE_DATA_CRC_Error
+    w32 0x6000091C  0x0000FFFF  # IMAGE_DATA_CRC_Error
 
 lblnamed                        #name:RESULT_CRC_3RD_LOCATION# 
 i4drcheck   0x33333333          # New FW  
     jmpnamed    always  0       #name:CRC_CALCULATION_MAIN_END#
-    w32 0x60000918  0xFFFFFFFF  # FW_DATA_CRC_Error
+    w32 0x60000918  0x0000FFFF  # FW_DATA_CRC_Error
 
 jmpnamed    always  0           #name:CRC_CALCULATION_MAIN_END#
 
