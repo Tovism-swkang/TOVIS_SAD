@@ -1,0 +1,44 @@
+# Indigo4L
+# SC1721
+
+#^ 2024.11.14
+
+#^ Component ID : SAD_RTC_303 
+#^ Internal Flash Address : 
+#^ RAM : 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 : 
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 
+
+#^ UNIT 
+#^ Event_1_Ctrl 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_RTC_303 Event_1 
+## Unit - Event_1_Ctrl
+
+
+## RLT 0,1 Overflow Reset 
+w32	0x000A0008	0x01020008	    # RLT_0.TMCSR#
+w32	0x000A0808	0x01020008	    # RLT_1.TMCSR#
+# [24] Count Enable 
+# [17] Underflow Interrupt Clear 
+# [3] Interrupt Enable 
+
+
+
+## SAD_APPL_103 IFBd_ExFsh_Ctrl 
+fncCall             #name:Appr_Ctrl# 
+
+## SAD_APPL_109 FLT_Handler 
+fncCall             #name:Flt_Ctrl# 
+
+
+
+## RLT 0 Timer Reset 
+
+
+i4end
+e
