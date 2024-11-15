@@ -14,78 +14,81 @@
 ## Unit - Appr_Ctrl (Approval Control)
 #@ caller - "SAD_RTC_303 Event1" 
 
-#! Toggle_ExtFlash는 반드시 Boot Seq Cleaning up 단계에서 0x00001111로 초기화 해줘야 함. 
+#! Toggle_ExtFlash(0x600025F8)는 반드시 Boot Seq Cleaning up 단계에서 0x00001111로 초기화 해줘야 함. 
 
 #$	Req_ExtFlash				@IntFlash Sector 41 
 #$ 	Auth_ExtFlash				@IntFlash Sector 42 
-#$	Host_Req_ExtFlash			@RAM 0x
-#$ 	Host_Auth_ExtFlash			@RAM 0x 
+#$	Host_Req_ExtFlash			@RAM 0x600022F0
+#$ 	Host_Auth_ExtFlash			@RAM 0x600022F4
 
-#$ 	Toggle_ExtFlash				@RAM	0x600025F8 
-#$ 	ExtFlash_Switch_Status		@RAM	0x600025FC
+#$ 	Toggle_ExtFlash				@RAM 0x600025F8 
+#$ 	ExtFlash_Switch_Status		@RAM 0x600025FC
 
 
 fncBegin					#name:Appr_Ctrl# 
-w32	0x00026000	0x00000013		# SPI Mode Change Direct Mode -> Command Sequencer Mode #
 
-### External Flash Access check 
-#r32	Usage_ExtFlash
-#i4drcheck	0x0000FFFF			# 
-#	jmpnamed	always	0		# 접근 가능 
-#	jmpnamed	always	0		#name:Exit_Appr_Ctrl# 접근 불가 	
-
-## Int Flash(Sector 41) -> RAM 
-i4copy	0x60000400  0x617C9000  4 # Addr, Src, Cnt - Src에서 Cnt만큼의 bytes 수를 Addr로 복사, Addr = RAM, Src = Int Flash #? Argu 변경 필요. 
-
-
+## Int Flash(Sector 41), Req_ExtFlash -> RAM, Host_Req_ExtFlash
+w32	0x00026000	0x00000013			# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+i4copy	0x600022F0	0x617E9000	4 	# RAM addr(Host_Req_ExtFlash), IntFlash addr(Req_ExtFlash), 4 Bytes
 
 ## Host Request check 
-r32 Host_Req_ExtFlash		# Host_Req_ExtFlash, 제어기가 Ext Flash에 접근하길 원하는가? 
+r32 0x600022F0				# Host_Req_ExtFlash, 제어기가 Ext Flash에 접근하길 원하는가? 
 i4drcheck   0x0000FFFF      # 
     jmpnamed    always  0   #name:CLOSE_THE_DOOR# 	Host No Request 
     jmpnamed    always  0   #name:OPEN_THE_DOOR# 	Host Request 
 
-## Open the door 
+## Open the door - SPI switch IC 
 lblnamed                    #name:OPEN_THE_DOOR#     
 w32	0x600025FC	0x0000FFFF	# ExtFlash_Switch_Status = (Host&ExtFlash) 
-#@ Unit Call 
 #% UNIT 전달인자 
-r32	0x600025FC				
+r32	0x600025FC
 i4drsave	0				# Buffer[0] = ExtFlash_Switch_Status 
-fncCall						#name:SPI_SWT# - #? Host_Req_ExtFlash 값에 종속적. 
+fncCall						#name:SPI_SWT# - #@ Unit Call - Host_Req_ExtFlash 값에 종속적. 
 #% UNIT 반환인자 - 없음 
-
 
 ## Toggle_ExtFlash variable check 
 r32	0x600025F8				# Toggle_ExtFlash, 부팅 시 초기값 0x00001111 
 i4drcheck	0x00001111 
 	jmpnamed	always	0	#name:TheDoorIsAlreadyOpened# - # vari != 0x00001111, 
-	jmpnamed	always	0	#name:Fist_KnockKnock# - #? vari == 0x00001111, -> 값 변경 
+	jmpnamed	always	0	#name:First_KnockKnock# - #? vari == 0x00001111, -> 값 변경 
 
 lblnamed					#name:TheDoorIsAlreadyOpened# 
-#? 이미 열려있으므로, IntFlash에 또 적을 필요 없음. 
+# 이미 열려있으므로, IntFlash에 또 적을 필요 없음. Toggle_ExtFlash 존재 이유 
 jmpnamed	always	0		#name:Exit_Appr_Ctrl# 
 
-lblnamed					#name:Fist_KnockKncok#  
-w32	0x600025F8 0x0000FFFF 	# Toggle_ExtFlash 
-w32	
-w32	Auth_ExtFlash	0x0000FFFF	#? 문 열었다는 승인, IntFlash에 적어야 함. 
-#@ Comp Call 
+
+lblnamed					#name:First_KnockKnock#  
+w32	0x600025F8 	0x0000FFFF 	# Toggle_ExtFlash 
+w32	0x600022F4	0x0000FFFF	# Host_Auth_ExtFlash
+
+## RAM, Host_Auth_ExtFlash -> Int Flash(Sector 42), Auth_ExtFlash
+w32	0x00026000	0x00000011	# SPI Mode Change Command Sequencer Mode -> Direct Mode #
+
+i4flasherase	42	FALSE 	
+lblnamed			        #name:SECTOR42_ERASE_1# - #@ loop start 		
+rf32    0x0002D010	0 1		# FLASH_CFG_CMDSEQ.STATUS_CTRL 
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0   #name:SECTOR42_ERASE_1# - #@ loop end 
+
+i4flashprog	0x617EA000	0x600022F4  4	FALSE	# RAM addr(Host_Auth_ExtFlash), IntFlash addr(Auth_ExtFlash), 4 Bytes
+lblnamed			        #name:SECTOR42_WRITE_1# - #@ loop start  		
+rf32	0x0002D010	0 1		# INDIGO4L.FLASH_CFG_CMDSEQ.STATUS_CTRL #
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0	#name:SECTOR42_WRITE_1# - #@ loop end  
+
 #% COMP 전달인자 
 #? <- 추가 할 것 
-i4call  STATUS_SAVE         # 
+i4call  STATUS_SAVE         #@ Comp Call 
 #% COMP 반환인자 - 없음 
 jmpnamed	always	0		#name:Exit_Appr_Ctrl# 
-
 
 ## Close the door 
 lblnamed                    #name:CLOSE_THE_DOOR# 
 w32	0x600025FC	0x00001111	# ExtFlash_Switch_Status = (Indigo&ExtFlash) 
-#@ Unit Call 
 #% UNIT 전달인자 
 r32	0x600025FC				
 i4drsave	0				# Buffer[0] = ExtFlash_Switch_Status 
-fncCall						#name:SPI_SWT# 문 닫을 것. 
+fncCall						#name:SPI_SWT# - #@ Unit Call 
 #% UNIT 반환인자 - 없음 
 
 ## Toggle_ExtFlash variable check 
@@ -96,12 +99,27 @@ i4drcheck	0x0000FFFF		# if
 
 ## Toggle Clear  	
 lblnamed					#name:Toggle_Clear#
-w32 0x600025F8 0x00001111 	
-w32	Auth_ExtFlash	0x00001111	#? 문 닫혀있다, IntFlash에 적어야 함. 
-#@ Comp Call 
+w32 0x600025F8 	0x00001111 	# Toggle_ExtFlash 
+w32	0x600022F4	0x0000FFFF	# Host_Auth_ExtFlash
+
+## RAM, Host_Auth_ExtFlash -> Int Flash(Sector 42), Auth_ExtFlash
+w32	0x00026000	0x00000011	# SPI Mode Change Command Sequencer Mode -> Direct Mode #
+
+i4flasherase	42	FALSE 	
+lblnamed			        #name:SECTOR42_ERASE_2# - #@ loop start 
+rf32    0x0002D010	0 1		# FLASH_CFG_CMDSEQ.STATUS_CTRL 
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0   #name:SECTOR42_ERASE_2# - #@ loop end 
+
+i4flashprog	0x617EA000	0x600022F4  4	FALSE	# RAM addr(Host_Auth_ExtFlash), IntFlash addr(Auth_ExtFlash), 4 Bytes 
+lblnamed			        #name:SECTOR42_WRITE_2#	- #@ loop start  
+rf32	0x0002D010	0 1		# INDIGO4L.FLASH_CFG_CMDSEQ.STATUS_CTRL #
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0	#name:SECTOR42_WRITE_2# - #@ loop end  
+
 #% COMP 전달인자 
 #? <- 추가 할 것 
-i4call  STATUS_SAVE         # 
+i4call  STATUS_SAVE         #@ Comp Call 
 #% COMP 반환인자 - 없음 
 
 lblnamed					#name:Exit_Appr_Ctrl# 
@@ -109,11 +127,17 @@ lblnamed					#name:Exit_Appr_Ctrl#
 fncEnd						#name:Appr_Ctrl# 
 
 
+
 ###################################################################################################################
 ###################################################################################################################
 ###################################################################################################################
 ## Comp - SAD_APPL_103 IFBd_ExFsh_Ctrl (Interface Board - External Flash Control)
 ## Unit - SPI_SWT (SPI Switch IC)
+#@ caller - Appr_Ctrl
+
+#$ SCH net name : SPI_EIRQ[GPIO21] -> SPI Switch IC's SEL pin 
+#$ SPI Switch IC : SN3257-Q1 , SEL "0" : Indigo&ExtFlash, SEL "1" : Host&ExtFlash			
+#$ D/S URL : https://www.ti.com/lit/ds/symlink/sn3257-q1.pdf?ts=1731638193419&ref_url=https%253A%252F%252Fwww.google.com%252F
 
 #% UNIT 전달인자
 #% Buffer[0]	
@@ -122,19 +146,12 @@ fncBegin					#name:SPI_SWT#
 
 i4drrestore	0						# Switch IC 
 i4drcheck  0x00001111              
-    wf32    0x000A8000  21  1   1   # POSR0 Low : if (Vari == 0x0000FFFF), Host <-> Ext Flash 
-    wf32    0x000A8008  21  1   1   # POCR0 Low : if (Vari == 0x00001111), Indigo <-> Ext Flash 
+    wf32    0x000A8000  21  1   1   # GPIO.POSR0 LOW - OUTPUT HIGH : if (Vari == 0x0000FFFF), Host <-> Ext Flash 
+    wf32    0x000A8008  21  1   1   # GPIO.POCR0 LOW - OUTPUT LOW : if (Vari == 0x00001111), Indigo <-> Ext Flash 
 
 #% UNIT 반환인자 - 없음
 
 fncEnd						#name:SPI_SWT# 
-
-
-
-
-
-
-
 
 
 

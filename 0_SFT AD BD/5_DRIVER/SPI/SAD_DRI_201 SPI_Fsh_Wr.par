@@ -53,7 +53,7 @@
 fncBegin			        #name:INTERNAL_WRITE#		
 
 d	1000			        # 1ms 	
-i4flashprog	0x00000000	0x00000000  16383	FALSE   # 16383 == 1 sector 4KB, 4096 
+i4flashprog	0x00000000	0x00000000  16383	FALSE   
 d	1000                    # 1ms 	
 
 #@ loop start 

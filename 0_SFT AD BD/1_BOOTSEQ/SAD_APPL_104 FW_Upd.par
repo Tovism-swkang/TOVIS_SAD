@@ -1,0 +1,557 @@
+# Indigo4L
+# SC1721
+
+
+#^ 2024.11.15
+
+#^ Component ID : SAD_APPL_104 
+#^ Internal Flash Address : 
+#^ RAM : 
+#^ 전달 인자(GPreg)를 받을 RAM 주소 : 
+#^ 반환 인자(GPreg)에 전달할 RAM 주소 : 
+
+#^ UNIT 
+#^ 1. FW_Ctrl 
+#^ 2. OLD_FW_Backup
+#^ 3. NEW_FW_Load
+#^ 4. OLD_FW_ReLoad 
+
+
+#? Data Size argue 추가 필요 
+#? New FW Update Fail Fault 추가 필요 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_104 FW_Upd (FW_Update)
+## Unit - FW_Ctrl 
+#@ caller - SAD_RTC_301 
+
+fncBegin			#name:FW_Ctrl# 
+
+# Buffer Clear - #! COMP 시작에서는 모든 error 방지 차원에서 반드시 Buffer Clear 해줄 것.  
+i4bufclr    0
+i4bufclr    1
+i4bufclr    2
+i4bufclr    3
+i4bufclr    4
+i4bufclr    5
+i4bufclr    6
+i4bufclr    7
+i4bufclr    8
+i4bufclr    9
+i4bufclr    10
+i4bufclr    11
+i4bufclr    12 
+
+## Int Flash(Sector 43), Req_FW_Update -> RAM, Host_Req_FW_Update
+w32	0x00026000	0x00000013		# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+i4copy	0x600022F8	0x617EB000  4	# Addr, Src, Cnt
+
+r32	0x600022F8					# Host_Req_FW_Update
+i4drcheck	0x00001111		 
+	jmpnamed	always	0		#name:NO_NEW_FW# - Exit  
+	jmpnamed	always	0		#name:NEW_FW_EXISTS# - FW Update 
+
+## New FW exists 
+lblnamed					#name:NEW_FW_EXISTS# 
+
+## Old FW Backup (Int Flash -> Ext Flash)
+#% UNIT 전달인자 - 없음 
+fncCall				#name:OLD_FW_Backup# - #@ Unit Call  
+#% UNIT 반환인자 - Buffer[12]
+i4drrestore	12		# DREG0 = Buffer[12], Old FW backup Result 
+i4drcheck	0x00001111	# 0x00001111 == Pass 
+	jmpnamed	always	0	#name:OLD_FW_Backup_FAILED#		fail
+	jmpnamed	always	0	#name:OLD_FW_Backup_SUCCEEDED# 	pass 
+
+## Old FW Backup Failed 
+lblnamed					#name:OLD_FW_Backup_FAILED# 
+#? Old FW Backup Fail에 대한 RAM에 기록 추가할 것? - 디버깅용. 
+
+## New FW Load (Ext Flash -> Int Flash)
+lblnamed					#name:OLD_FW_Backup_SUCCEEDED# 
+#% UNIT 전달인자 - 없음 
+fncCall				#name:NEW_FW_Load# - #@ Unit Call 
+#% UNIT 반환인자 - Buffer[12] 
+i4drrestore	12		# DREG0 = Buffer[12], New FW Load Result 
+i4drcheck	0x00001111	# 0x00001111 == Pass 
+	jmpnamed	always	0	#name:NEW_FW_Load_FAILED#		fail
+	jmpnamed	always	0	#name:NEW_FW_Load_SUCCEEDED# 	pass
+
+## New FW Load Failed, Old FW Reload 
+lblnamed			#name:NEW_FW_Load_FAILED# 
+#% UNIT 전달인자 - 없음 
+fncCall				#name:OLD_FW_ReLoad# - #@ Unit Call 
+#% UNIT 반환인자 - Buffer[12] 
+i4drrestore	12		# DREG0 = Buffer[12], Old FW Reload Result 
+i4drcheck	0x00001111	# 0x00001111 == Pass 
+	jmpnamed	always	0	#name:#		fail
+	jmpnamed	always	0	#name:# 	pass
+
+## New FW Load Succeeded, Request HW Reset 
+lblnamed					#name:NEW_FW_Load_SUCCEEDED# 
+## RAM, Host_Req_Reset -> Int Flash(Sector 44), Req_Reset 
+w32	0x00026000	0x00000011	# SPI Mode Change Command Sequencer Mode -> Direct Mode #
+w32	0x600022FC	0x00001111 	# Host_Req_Reset = HW_RESET 
+i4flasherase	44	FALSE 	
+lblnamed			        #name:SECTOR44_ERASE# - #@ loop start 		
+rf32    0x0002D010	0 1		# FLASH_CFG_CMDSEQ.STATUS_CTRL 
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0   #name:SECTOR44_ERASE# - #@ loop end 
+
+i4flashprog	0x617EC000	0x600022FC	4	FALSE	# RAM addr(Host_Req_FW_Update), IntFlash addr(Req_FW_Update), 4 Bytes
+lblnamed			        #name:SECTOR44_WRITE# - #@ loop start  		
+rf32	0x0002D010	0 1		# FLASH_CFG_CMDSEQ.STATUS_CTRL 
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0	#name:SECTOR44_WRITE# - #@ loop end  
+
+## Wait for HW Reset 
+
+	#w32	Delay	0xnnnnnnnn			# delay value 
+	## Time measurement - Start 
+	#w32	Time_Duration	0x00000000
+	#w32	Start_Time_Duration	0x00000000	# 
+	#w32	Current_Time_Duration	0x00000000 
+	#i4systime
+	#i4drput 32 Start_Time_Duration	# 
+	#
+	#lblnamed		#WAITING_FOR_RESET# 
+	#d	100			# delay 100us 
+	#i4systime						# DREG0 = SYSTIME() 
+	#i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+	#i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+	#i4sub							# DREG0 = DREG1 - DREG0 
+	#i4abs							# abs(DREG0)
+	#i4drput	32	Time_Duration		# Time_Duration = DREG0 
+	#i4drload	0x000186A0			# = 100ms , DREG1 = Time_Duration, DREG0 = 0x000186A0 
+
+	
+## Exit 
+lblnamed					#name:NO_NEW_FW# - Exit 
+w32	0x600022FC	0x0000FFFF 	# Host_Req_Reset = DONT_RESET 
+
+fncEnd				#name:FW_Ctrl# 
+
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_104 FW_Upd (FW_Update)
+## Unit - OLD_FW_Backup 
+#@ caller - FW_Ctrl
+
+fncBegin			#name:OLD_FW_Backup# 
+
+## Int Flash(Old FW) -> RAM(FW Data area)
+#% COMP 전달인자 
+w32	0x00040200	0x60150000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x617C0000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Rd			#@ Comp Call, SPI_Flash_Read, Int Flash (Old FW) -> RAM (FW data)
+#% COMP 반환인자 
+r32	0x0004027C 				# Read C, GPreg[31]
+
+## SPI Read Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:OLD_FW_Backup_READ_FAILED#		Fail 
+	jmpnamed	always	0	#name:OLD_FW_Backup_READ_SUCCEEDED#		Pass 
+
+## RAM(Old FW) -> Ext Flash(Old FW area)
+lblnamed					#name:OLD_FW_Backup_READ_SUCCEEDED#
+#% COMP 전달인자 
+w32	0x00040200	0x00040000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x60150000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Wr			#@ Comp Call, SPI_Flash_Write, RAM (FW data) -> Ext Flash 
+#% COMP 반환인자 
+r32	0x0004027C 				# Write C, GPreg[31]
+
+## SPI Write Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:OLD_FW_Backup_WRITE_FAILED#		Fail 
+	jmpnamed	always	0	#name:OLD_FW_Backup_WRITE_SUCCEEDED#	Pass 
+
+## Old FW Backup Failed 
+lblnamed					#name:OLD_FW_Backup_WRITE_FAILED# 
+lblnamed					#name:OLD_FW_Backup_READ_FAILED# 
+#% UNIT 반환인자 
+i4drload	0x0000FFFF 		# Fail 
+i4drsave	12				# Buffer[12] = Fail 
+jmpnamed	always	0		#name:OLD_FW_Backup_END# 
+
+## Old FW Backup Succeeded 
+lblnamed					#name:OLD_FW_Backup_WRITE_SUCCEEDED# 
+#% UNIT 반환인자 
+i4drload	0x00001111로	# Pass 
+i4drsave	12				# Buffer[12] = Pass 
+
+lblnamed					#name:OLD_FW_Backup_END# 
+fncEnd				#name:OLD_FW_Backup# 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_104 FW_Upd (FW_Update)
+## Unit - NEW_FW_Load 
+#@ caller - FW_Ctrl
+
+fncBegin			#name:NEW_FW_Load# 
+
+## Ext Flash(New FW) -> RAM (FW Data area)
+#% COMP 전달인자 
+w32	0x00040200	0x60150000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x00000000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Rd			#@ Comp Call, SPI_Flash_Read, Ext Flash (New FW) -> RAM (FW data area)
+#% COMP 반환인자 
+r32	0x0004027C 				# Read C, GPreg[31]
+
+## SPI Read Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:NEW_FW_Load_READ_FAILED# - Fail ,  - #? 241114 - SPI 통신 Fail 시에 어떻게 할 건지???? 
+	jmpnamed	always	0	#name:NEW_FW_Load_READ_SUCCEEDED# - Pass 
+
+## RAM (FW Data area) -> Int Flash (New FW)
+lblnamed					#name:NEW_FW_Load_READ_SUCCEEDED#
+#% COMP 전달인자 
+w32	0x00040200	0x6017C000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x60150000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Wr			#@ Comp Call, SPI_Flash_Write(RAM (FW data) -> Ext Flash) 
+#% COMP 반환인자 
+r32	0x0004027C 				# Write C, GPreg[31]
+
+## SPI Write Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:NEW_FW_Load_WRITE_FAILED# - Fail 
+	jmpnamed	always	0	#name:NEW_FW_Load_WRITE_SUCCEEDED# - Pass 
+
+## New FW Load Succeeded, run Memory CRC 
+lblnamed					#name:NEW_FW_Load_WRITE_SUCCEEDED# 
+
+## Read Memory CRC Info 
+## Ext Flash(Sector 48), CRC Info -> RAM 
+w32	0x00026000	0x00000013			# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+i4copy	0x60000900	0x00030000	12 	# RAM, ExtFlash, 12 Bytes
+
+#% COMP 전달인자 
+r32	0x60000900 				
+i4drput	32	0x00040200		# GPreg[0] = CRC_Expected_Result
+r32	0x60000904
+i4drput	32	0x00040204		# GPreg[1] = CRC_SrcAddress 
+r32	0x60000908 
+i4drput	32	0x00040208		# GPreg[2] = CRC_Calc_Length 
+i4call						#@ Comp Call, Memory_CRC(NewFW) 
+#% COMP 반환인자 
+r32	0x0004027C				# GPreg[31] = CRC_Success_Status
+i4drcheck	0x00001111
+	jmpnamed	always	0	#name:NEW_FW_CRC_FAILED# 	CRC fail 
+	jmpnamed	always	0	#name:NEW_FW_CRC_SUCCEEDED# CRC pass 
+
+## New FW Load Failed 
+lblnamed					#name:NEW_FW_CRC_FAILED# 
+lblnamed					#name:NEW_FW_Load_WRITE_FAILED# 
+lblnamed					#name:NEW_FW_Load_READ_FAILED# 
+#% UNIT 반환인자 
+i4drload	0x0000FFFF 		# Fail 
+i4drsave	12				# Buffer[12] = Fail 
+jmpnamed	always	0		#name:NEW_FW_Load_END# 
+
+## New FW Load & Memory CRC Succeeded 
+lblnamed					#name:NEW_FW_CRC_SUCCEEDED# 
+#% UNIT 반환인자 
+i4drload	0x00001111		# Pass 
+i4drsave	12				# Buffer[12] = Pass 
+
+lblnamed					#name:NEW_FW_Load_END# 
+fncEnd				#name:NEW_FW_Load# 
+
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+## Comp - SAD_APPL_104 FW_Upd (FW_Update)
+## Unit - OLD_FW_ReLoad 
+
+fncBegin			#name:OLD_FW_ReLoad# 
+
+## Ext Flash(Old FW) -> RAM (FW Data area)
+#% COMP 전달인자 
+w32	0x00040200	0x60150000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x00040000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Rd			#@ Comp Call, SPI_Flash_Read, Ext Flash (New FW) -> RAM (FW data area)
+#% COMP 반환인자 
+r32	0x0004027C 				# Read C, GPreg[31]
+
+## SPI Read Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:OLD_FW_ReLoad_READ_FAILED#		Fail 
+	jmpnamed	always	0	#name:OLD_FW_ReLoad_READ_SUCCEEDED#		Pass 
+
+## RAM (FW Data area) -> Int Flash (Old FW)
+lblnamed					#name:OLD_FW_ReLoad_READ_SUCCEEDED#
+#% COMP 전달인자 
+w32	0x00040200	0x6017C000	# DST Address, GPreg[0]
+w32	0x00040204				# Data Size, GPreg[1] #? argu 추가할 것 
+w32	0x00040208	0x60150000	# SRC Address, GPreg[2] 
+i4call	SPI_Fsh_Wr			#@ Comp Call, SPI_Flash_Write(RAM (FW data) -> Ext Flash) 
+#% COMP 반환인자 
+r32	0x0004027C 				# Write C, GPreg[31]
+
+## SPI Write Fail check 
+i4drcheck	0x55555555
+	jmpnamed	always	0	#name:OLD_FW_ReLoad_WRITE_FAILED#		Fail 
+	jmpnamed	always	0	#name:OLD_FW_ReLoad_WRITE_SUCCEEDED#	Pass 
+
+## Old FW ReLoad Failed 
+lblnamed					#name:OLD_FW_ReLoad_WRITE_FAILED# 
+#% UNIT 반환인자 
+i4drload	0x0000FFFF 		# Fail 
+i4drsave	12				# Buffer[12] = Fail 
+jmpnamed	always	0		#name:OLD_FW_ReLoad_END# 
+
+## Old FW ReLoad Succeeded 
+lblnamed					#name:OLD_FW_ReLoad_WRITE_SUCCEEDED# 
+#% UNIT 반환인자 
+i4drload	0x00001111 		# Pass
+i4drsave	12				# Buffer[12] = Pass
+
+lblnamed					#name:OLD_FW_ReLoad_END# 
+fncEnd				#name:OLD_FW_ReLoad# 
+
+###################################################################################################################
+###################################################################################################################
+###################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 무시해도 됨. 
+	##@ 위치 : Boot Sequence 
+	#
+	#
+	#fncBegin                            #name:NEW_FW_UPDATE# 
+	#
+	### Read New FW Info, 	Ext Flash (New FW) -> RAM 
+	##? Ext Flash에서 NEW_FW_Update_Flag 등 FW Info Read. (신규 FW 존재 여부)
+	##? 명령어 argu 수정 필요 
+	#w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address, 
+	#
+	#w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	### Infinite_loop_exception_handler 
+	##? 해당 부분 call addr로 처리하는 게 낫지 않나? SPI read & write에는 항상 쓰는게? 단 시간 설정을 해줘야 함. 
+	#
+	#	#? 기존 코드 문제점 : SPI에 문제가 생겨서 Read completed가 안 뜨면? 
+	#	#lblnamed			#name:Read_COMPLETE_2#		
+	#	#r32		0x60140010					# RAM.Read_C
+	#	#i4drcheck	0x55555555
+	#	#	jmpnamed	always	0	#name:Read_COMPLETE_2# CMDSEQ1의 CODE Read 수행 완료까지 대기 		
+	#	#	d	5000						
+	#
+	#	#? 신규 코드 : 문제가 생겨도 특정 시간까지만 loop를 돌고 빠져나옴. 
+	#	# Time measurement - Start 
+	#	w32	Time_Duration	0x00000000
+	#	w32	Start_Time_Duration	0x00000000	# 
+	#	w32	Current_Time_Duration	0x00000000 
+	#	i4systime
+	#	i4drput 32 Start_Time_Duration	# 
+	#
+	#	#@ Delay Loop - Start 
+	#	lblnamed						#name:WAIT_UNTIL_SPI_COMPLETED#		
+	#	r32	0x60140010					# RAM.Read_C
+	#	i4drcheck	0x55555555
+	#		jmpnamed	always	0		#name:KEEP_GOING_SPI#	CMDSEQ1의 CODE Read 수행 완료까지 대기 		
+	#		jmpnamed	always	0		#name:SPI_COMPLETED# 
+	#
+	#	lblnamed						#name:KEEP_GOING_SPI#  
+	#	i4drget	32	Delay_Tick			# 
+	#	i4drwait						# wait for DREG0 
+	#
+	#	i4systime						# DREG0 = SYSTIME() 
+	#	i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+	#
+	#	i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+	#	i4sub							# DREG0 = DREG1 - DREG0 
+	#	i4abs							# abs(DREG0)
+	#	i4drput	32	Time_Duration		# Time_Duration = DREG0 
+	#
+	#	i4drget	32	Delay_Count			# DREG1 = Time_Duration, DREG0 = Delay_Count 
+	#
+	#	# if(DREG1 >= DREG0), SPI Fail 
+	#	jmpnamed	>=	0				#name:SPI_FAIL# 
+	#		jmpnamed	always	0		#name:WAIT_UNTIL_SPI_COMPLETED# 
+	#	#@ Delay Loop - End 
+	#
+	#	lblnamed						#name:SPI_FAIL# 
+	#	w32	SPI_Error	0xFFFFFFFF		# SYS_FAULT에서 핸들링 할것?  
+	#
+	#	lblnamed						#name:WAIT_UNTIL_SPI_COMPLETED# 	
+	#	d	5000						# 5ms delay 
+	#	i4return
+	##
+	#
+	### FW_Update_Flag check 
+	#r32	NEW_FW_Update_Flag	
+	#i4drcheck	0xFFFFFFFF 		# if 0xF~F, it means "New FW exists." 
+	#	jmpnamed	always	0	#name:EXIT_FW_UPDATE#	@ New FW 없음 - Exit 
+	#
+	### FW_Version check 
+	#r32	New_FW_Version			# DREG1 = DREG0, DREG0 = New_FW_Version 
+	#r32	Current_FW_Version		# DREG1 = New_FW_Version, DREG0 = Current_FW_Version 
+	#jmpnamed	<=	0			#name:EXIT_FW_UPDATE#	@ New_FW_Version <= Current_FW_Version, no need update. 
+	#
+	### Int Flash -> Ext Flash. Current FW Backup. No need Memory CRC 
+	##? 명령어 argu 수정 필요. 
+	## 1. Int Flash -> RAM 
+	#w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address, 
+	#
+	#w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	## 2. RAM -> Ext Flash 
+	#w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address
+	#
+	#w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	### Ext Flash -> Int Flash. New FW Update. need Memory CRC 
+	##? 명령어 argu 수정 필요 
+	## 1. Ext Flash -> RAM 
+	#w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address, 
+	#
+	#w32	0x0002C300	0x60140030		# CMDSEQ1 - Flash Read 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	## 2. RAM -> Ext Flash 
+	#w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address
+	#
+	#w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	### Read CRC info,	Ext Flash -> RAM 
+	##? 명령어 argu 수정 필요 
+	#w32	0x60140010	0x00000000		# Read C, 상태 확인 변수 Clear
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address, 
+	#
+	#w32	0x0002C300	0x60140030		# CMDSEQ1 - CODE Read 위 설정에 대해 RAM.CODE Read 영역 수행 	
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	### Memory CRC - New FW 
+	##? Memory CRC Fail에 대한 처리는 미정. 
+	#i4call Memory_CRC 
+	#
+	### New_FW_Update_Flag Clear @Ext Flash 
+	##? 해당 변수 있는 Sector Erase 후, 해당 주소 0x00000000 write 
+	##? 명령어 argu 수정 필요 
+	#w32	0x60140010	0x00000000		# Write C, 상태 확인 변수 Clear 
+	#w32	0x60140004	0x60100000		# DST Address, 저장 위치 
+	#w32	0x60140008	0x00027000		# Data Size 
+	#w32	0x6014000C	0x00400000		# SRC Address
+	#
+	#w32	0x0002C300	0x60140300		# CMDSEQ1 - Flash Write 
+	#
+	#w32	Delay_Count	0x000186A0		# Delay_Count * Delay_Tick = 100ms
+	#w32	Delay_Tick	0x00000001 		# 1us 
+	#i4call Infinite_loop_exception_handler 
+	#
+	### Status Save 
+	#i4call Status_Save 
+	#
+	#
+	### Waiting for Reset 
+	#w32	Delay	0xnnnnnnnn			# delay value 
+	## Time measurement - Start 
+	#w32	Time_Duration	0x00000000
+	#w32	Start_Time_Duration	0x00000000	# 
+	#w32	Current_Time_Duration	0x00000000 
+	#i4systime
+	#i4drput 32 Start_Time_Duration	# 
+	#
+	#lblnamed		#WAITING_FOR_RESET# 
+	#d	100			# delay 100us 
+	#i4systime						# DREG0 = SYSTIME() 
+	#i4drput	32	Current_Time_Duration	# Current_Time_Duration	= DREG0 
+	#i4drget	32	Current_Time_Duration	# DREG1 = DREG0, DREG0 = *(Current_Time_Duration) 
+	#i4sub							# DREG0 = DREG1 - DREG0 
+	#i4abs							# abs(DREG0)
+	#i4drput	32	Time_Duration		# Time_Duration = DREG0 
+	#i4drload	0x000186A0			# = 100ms , DREG1 = Time_Duration, DREG0 = 0x000186A0 
+	#
+	#
+	#
+	#
+	#lblnamed					#name:EXIT_FW_UPDATE# 
+	#fncEnd						#name:NEW_FW_UPDATE# 
+	#
+	#
+	#

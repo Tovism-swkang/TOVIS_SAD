@@ -1,7 +1,7 @@
 # Indigo4L
 # SC1721
 
-#^ 2024.11.14
+#^ 2024.11.15
 
 #^ Component ID : SAD_RTC_303 
 #^ Internal Flash Address : 
@@ -27,15 +27,16 @@ w32	0x000A0808	0x01020008	    # RLT_1.TMCSR#
 # [17] Underflow Interrupt Clear 
 # [3] Interrupt Enable 
 
-
-
 ## SAD_APPL_103 IFBd_ExFsh_Ctrl 
-fncCall             #name:Appr_Ctrl# 
+#% COMP 전달인자 - 없음 
+fncCall             #name:Appr_Ctrl# - #@ Comp Call  
+#% COMP 반환인자 - 없음 
+
 
 ## SAD_APPL_109 FLT_Handler 
-fncCall             #name:Flt_Ctrl# 
-
-
+#% COMP 전달인자 - 없음 
+fncCall             #name:Flt_Ctrl# - #@ Comp Call 
+#% COMP 반환인자 - 없음 
 
 ## RLT 0 Timer Reset 
 

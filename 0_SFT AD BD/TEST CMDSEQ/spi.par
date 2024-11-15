@@ -1,0 +1,40 @@
+# Indigo4L
+# SC1721
+
+
+
+
+## RAM, Host_Auth_ExtFlash -> Int Flash(Sector 42), Auth_ExtFlash
+w32	0x00026000	0x00000011	# SPI Mode Change Command Sequencer Mode -> Direct Mode #
+w32 0x60000000  0xDEADBEEF  
+
+i4flasherase	42	FALSE 	
+#@ loop start
+lblnamed			        #name:SECTOR42_ERASE#		
+rf32    0x0002D010	0 1		# FLASH_CFG_CMDSEQ.STATUS_CTRL 
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0   #name:SECTOR42_ERASE# 
+#@ loop end
+
+i4flashprog	0x617EA000	0x60000000  4	FALSE	# 
+#@ loop start 
+lblnamed			        #name:SECTOR42_WRITE#		
+rf32	0x0002D010	0 1		# INDIGO4L.FLASH_CFG_CMDSEQ.STATUS_CTRL #
+i4drcheck	0x00000001		# if [0] cmd_rdy == 0
+    jmpnamed	always	0	#name:SECTOR42_WRITE# 
+#@ loop end 
+
+
+## Int Flash(Sector 41), Req_ExtFlash -> RAM, Host_Req_ExtFlash
+w32	0x00026000	0x00000013			# SPI Mode Change Direct Mode -> Command Sequencer Mode #
+i4copy	0x60000004	0x617EA000	2 	# RAM addr(Host_Req_ExtFlash), IntFlash addr(Req_ExtFlash), Cnt 
+
+
+r32 0x60000004 
+
+i4end
+
+
+e
+
+
